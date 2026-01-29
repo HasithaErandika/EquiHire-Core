@@ -1,4 +1,4 @@
-[equihire.gateway]
+[ballerina_gateway]
 pythonServiceUrl = "http://localhost:8000"
-twilioAccountSid = "AC-placeholder"
-twilioAuthToken = "auth-token-example"
+asgardeoOrgUrl = "https://api.asgardeo.io/t/your_org_name"
+asgardeoJwksUrl = "https://api.asgardeo.io/t/your_org_name/oauth2/jwks"
