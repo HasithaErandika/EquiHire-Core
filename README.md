@@ -58,6 +58,89 @@ EquiHire utilizes a **Cloud-Native Hybrid Microservices** pattern hosted on **WS
 
 ---
 
+## 🔐 Identity Lifecycle (Asgardeo Integration)
+
+Here is the step-by-step workflow of how the Interviewer (Recruiter) and Candidate interact, specifically focusing on how **WSO2 Asgardeo** handles the Identity and Access Management (IAM) behind the scenes.
+
+### Phase 1: The Setup (Organization Creation)
+Before any interview happens, the company must exist in the system.
+
+1.  **The Sign-Up:**
+    *   **Action:** The Lead Recruiter (Admin) visits the web portal and clicks "Sign Up for Enterprise."
+    *   **Asgardeo's Role:**
+        *   The app redirects to the Asgardeo Login Page.
+        *   The Admin can use SSO (Single Sign-On). For example, if they work at WSO2, they sign in with their corporate Microsoft/Google account.
+        *   **Tech:** Asgardeo verifies the corporate credentials via OIDC (OpenID Connect).
+
+2.  **Organization Provisioning:**
+    *   **Action:** Once logged in, the Admin creates their organization profile: "Virtusa - Tech Hiring Team".
+    *   **Asgardeo's Role:** EquiHire assigns this user the "Organization Admin" role in Asgardeo. This gives them permission to invite other recruiters.
+
+### Phase 2: The Recruiter's Journey (Creating the Interview)
+Now the recruiter is logged in and ready to hire.
+
+1.  **Login:**
+    *   **Action:** Mr. Perera (Recruiter) logs in using his company email.
+    *   **Asgardeo:** Authenticates him and returns a JWT (JSON Web Token). This token contains a claim: `role: "RECRUITER"`.
+    *   **EquiHire Backend:** Checks the token. "Okay, this is Mr. Perera from Virtusa. Show him the Virtusa Dashboard."
+
+2.  **Scheduling the Session:**
+    *   **Action:** He clicks "New Session" on the dashboard.
+    *   **Input:** Job Role (Senior Python Engineer), Candidate Email (sarah.j@gmail.com), Date/Time.
+    *   **The Trigger:** When he clicks "Send Invite," the Ballerina Gateway wakes up.
+
+### Phase 3: The "Magic" Invitation (Asgardeo Integration)
+This is the most critical part for User Experience. Candidates should NOT have to create a complex account with a password.
+
+1.  **Backend Logic (Ballerina):**
+    *   The Ballerina service receives the request: "Invite sarah.j@gmail.com."
+    *   It calls the Asgardeo **SCIM 2.0 API** (System for Cross-domain Identity Management).
+    *   **Command:** "Create a temporary user for Sarah."
+
+2.  **The "Magic Link" Dispatch:**
+    *   **Asgardeo's Role:** It generates a Passwordless Login Link (or a One-Time Code).
+    *   **Email:** Asgardeo (or your Ballerina service via an Email SDK) sends an email to Sarah: *"You have been invited to a Blind Interview with [Company Redacted]. Click here to join."*
+
+### Phase 4: The Candidate's Journey (The Login)
+Sarah receives the email.
+
+1.  **The Click:**
+    *   **Action:** Sarah clicks the link in her email.
+    *   **Asgardeo's Role:**
+        *   The link redirects her to Asgardeo.
+        *   Asgardeo verifies the unique token in the URL. **No password required.**
+        *   It redirects her back to the EquiHire Candidate Portal.
+
+2.  **The "Waiting Room" (Lobby):**
+    *   **Action:** Sarah lands on the "Mic Test" page.
+    *   **Security:**
+        *   The React App holds a Candidate Access Token.
+        *   This token has restricted permissions: `scope: "candidate_view"`.
+        *   She cannot see the Recruiter's dashboard. She cannot see other candidates.
+
+### Phase 5: The Interview (The Connection)
+The connection is established.
+
+1.  **Connecting to the Room:**
+    *   **Action:** Sarah clicks "Join Interview."
+    *   **Ballerina Gateway:**
+        *   It checks her Token: "Is this Sarah? Is she scheduled for this time?"
+        *   **Verification Success:** It opens the WebSocket Audio Stream.
+
+2.  **The End of the Session:**
+    *   **Action:** The interview finishes.
+    *   **Asgardeo:** The "Guest Session" expires. If Sarah tries to click the link again tomorrow, it will say "Link Expired." This prevents unauthorized access.
+
+### Summary of Roles
+
+| Actor | Asgardeo Feature Used | Experience |
+| :--- | :--- | :--- |
+| **Recruiter** | Enterprise SSO (OIDC) | Logs in with Company Email (Gmail/Outlook). Setup is permanent. |
+| **Candidate** | Passwordless Login (Magic Link) | No registration form. No "Forgot Password." Just one click to enter. |
+| **System** | RBAC (Role-Based Access Control) | Ensures Candidates can't see grading sheets and Recruiters can't see the Candidate's real name until the end. |
+
+---
+
 ## 🚀 Key Features
 
 ### 🧠 AI Capabilities
@@ -182,3 +265,17 @@ EquiHire-Core/
 This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
 
 ---
+
+## 🌳 Branching Strategy
+
+To maintain a professional and stable codebase, we follow a strict branching strategy:
+
+| Branch | Purpose |
+| :--- | :--- |
+| **`main`** | **Production-Ready Code.** This branch is protected. No direct commits allowed. It only contains stable releases. |
+| **`develop`** | **Integration Branch.** The main working branch where all development happens. |
+
+### How to Contribute
+1.  Checkout the `develop` branch.
+2.  Make your changes and verify them.
+3.  Push to `develop` (or create a PR if required).
