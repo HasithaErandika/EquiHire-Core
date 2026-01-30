@@ -273,11 +273,9 @@ To maintain a professional and stable codebase, we follow a strict branching str
 | Branch | Purpose |
 | :--- | :--- |
 | **`main`** | **Production-Ready Code.** This branch is protected. No direct commits allowed. It only contains stable releases. |
-| **`develop`** | **Integration Branch.** The main working branch where all features are merged and tested before release. |
-| **`feature/*`** | **New Features.** Created from `develop`. Example: `feature/ui-dashboard`, `feature/auth-setup`. |
-| **`hotfix/*`** | **Critical Fixes.** Created from `main` to fix production bugs immediately. |
+| **`develop`** | **Integration Branch.** The main working branch where all development happens. |
 
 ### How to Contribute
-1.  **Always** checkout to a new feature branch: `git checkout -b feature/my-cool-feature`
+1.  Checkout the `develop` branch.
 2.  Make your changes and verify them.
-3.  Merge back into `develop` via Pull Request (or merge locally if solo).
+3.  Push to `develop` (or create a PR if required).

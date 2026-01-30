@@ -14,7 +14,10 @@ configurable string asgardeoTokenAudience = "EquiHire-Core"; // This should matc
 final http:Client pythonClient = check new (pythonServiceUrl);
 
 // --- State Management ---
-// In-memory store for active frontend clients to broadcast messages
+// in-memory store for active frontend clients
+// Note: api.bal cannot access this easily if it's not public or shared. 
+// For this single-module project, specific access control might apply, 
+// but 'map' at module level is visible in the module.
 map<websocket:Caller> webClients = {};
 
 // --- Service Definition ---
@@ -103,6 +106,7 @@ service /dashboard on dashboardListener {
         jwt:Payload|jwt:Error result = jwt:validate(token, jwtValidatorConfig);
 
         if result is jwt:Error {
+            // For dev/demo without valid token, you might want to bypass or log
             return error websocket:UpgradeError("Invalid access token: " + result.message());
         }
 
