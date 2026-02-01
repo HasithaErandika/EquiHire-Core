@@ -3,6 +3,7 @@ import LandingPage from './pages/landing/Landing';
 import Dashboard from './pages/dashboard/Dashboard';
 import CandidateWelcome from './pages/candidate/Welcome';
 import CandidateInterview from './pages/candidate/Interview';
+import InviteHandler from './pages/candidate/InviteHandler';
 import OrganizationSetup from './pages/onboarding/OrganizationSetup';
 import { useState, useEffect } from 'react';
 
@@ -14,6 +15,11 @@ function App() {
   // Simple routing for Candidate Pages (MVP)
   // In a real app, use react-router-dom
   const path = window.location.pathname;
+
+  // Handle magic link invitations
+  if (path.startsWith('/invite/')) {
+    return <InviteHandler />;
+  }
 
   if (path === '/candidate/welcome') {
     return <CandidateWelcome />;

@@ -186,71 +186,90 @@ The connection is established.
     cd EquiHire-Core
     ```
 
-2.  **Run with Docker Compose (Recommended)**
-    This spins up Postgres, Redis, the AI Service, and the Gateway.
-    ```bash
-    docker-compose up --build
-    ```
+- [Ballerina](https://ballerina.io/downloads/) (Swan Lake Update 8+)
+- [Node.js](https://nodejs.org/) (v18+)
+- [Python](https://www.python.org/) (v3.9+)
+- [Docker](https://www.docker.com/) (Optional, for containerization)
+- [Supabase Account](https://supabase.com/) (for Database)
 
-3.  **Run Frontend (Manual)**
-    ```bash
-    cd react-frontend
-    npm install
-    npm run dev
-    ```
+### 1. Database Setup (Supabase)
+1. Create a new project in Supabase.
+2. Go to the **SQL Editor** and run the following scripts in order:
+   - `init.sql` (Base tables)
+   - `supabase_schema.sql` (Organizations & Recruiters)
+   - `interview_invitations_schema.sql` (Magic Link Auth)
 
-4.  **Expose Localhost (For Twilio)**
-    Use Ngrok to expose your Ballerina WebSocket port (9090).
-    ```bash
-    ngrok http 9090
-    ```
+### 2. Backend Gateway (Ballerina)
+1. Navigate to the gateway directory:
+   ```bash
+   cd ballerina-gateway
+   ```
+2. Configure your credentials in `Config.toml`:
+   - Set `smtpPassword` (Brevo/SMTP Master Password)
+   - Set `db.host`, `db.user`, `db.password` (from Supabase)
+3. Run the service:
+   ```bash
+   bal run
+   ```
+
+### 3. Frontend (React)
+1. Navigate to the frontend directory:
+   ```bash
+   cd react-frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+### 4. AI Engine (Python)
+1. Navigate to the engine directory:
+   ```bash
+   cd python-ai-engine
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run the engine:
+   ```bash
+   uvicorn main:app --reload
+   ```
 
 ---
 
-## 🔑 Environment Variables
-Create a `.env` file in the root directory.
+## ⚙️ Configuration
 
+### Ballerina Gateway (`ballerina-gateway/Config.toml`)
+Manages backend configurations including Database connection and Email services.
+```toml
+[database]
+host = "db.xyz.supabase.co"
+user = "postgres"
+password = "..."
+
+# Email Configuration
+smtpHost = "smtp-relay.brevo.com"
+smtpPassword = "..."
+```
+
+### Frontend (`react-frontend/.env`)
+Manages UI configuration and authentication settings.
 ```env
-# General
-ENV=development
-SECRET_KEY=your_super_secret_key
-
-# WSO2 / Identity
-ASGARDEO_CLIENT_ID=xxx
-ASGARDEO_CLIENT_SECRET=xxx
-ASGARDEO_ORG_URL=https://api.asgardeo.io/t/orgname
-
-# Database
-DATABASE_URL=postgres://user:password@localhost:5432/equihire
-
-# AI Services
-OPENAI_API_KEY=sk-xxx
-HUGGINGFACE_TOKEN=hf_xxx
-
-# Twilio
-TWILIO_ACCOUNT_SID=ACxxx
-TWILIO_AUTH_TOKEN=xxx
-
+VITE_ASGARDEO_CLIENT_ID=...
+VITE_ASGARDEO_BASE_URL=...
 ```
 
 ---
 
 ## 📂 Project Structure
 
-```text
+```
 EquiHire-Core/
-├── ballerina-gateway/       # The Ballerina Orchestrator Service
-│   ├── modules/
-│   └── service.bal          # WebSocket Listener
-├── python-ai-engine/        # The FastAPI AI Service
-│   ├── app/
-│   │   ├── core/            # Whisper & BERT Logic
-│   │   └── api/
-│   └── main.py
-├── react-frontend/          # React Application
-│   ├── src/
-│   │   ├── components/      # UI Components (Shadcn)
-│   │   └── hooks/           # useInterviewSocket.ts
 │   └── vite.config.ts
 ├── docker-compose.yml       # Container Orchestration
 └── README.md

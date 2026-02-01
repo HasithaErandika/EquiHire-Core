@@ -1,14 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Upload, FileText, CheckCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import { EquiHireLogo } from "@/components/ui/Icons";
 
+interface CandidateData {
+    email: string;
+    name: string;
+    jobTitle: string;
+    organizationId: string;
+}
+
 export default function CandidateWelcome() {
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadComplete, setUploadComplete] = useState(false);
+    const [candidateData, setCandidateData] = useState<CandidateData | null>(null);
+
+    useEffect(() => {
+        // Retrieve candidate data from sessionStorage
+        const storedData = sessionStorage.getItem('candidateData');
+        if (storedData) {
+            setCandidateData(JSON.parse(storedData));
+        }
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -46,7 +62,14 @@ export default function CandidateWelcome() {
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
                             <ShieldCheck className="h-8 w-8 text-blue-600" />
                         </div>
-                        <h1 className="text-3xl font-bold text-gray-900">Welcome to your Blind Interview</h1>
+                        <h1 className="text-3xl font-bold text-gray-900">
+                            Welcome{candidateData?.name ? `, ${candidateData.name}` : ' to your Blind Interview'}
+                        </h1>
+                        {candidateData?.jobTitle && (
+                            <p className="mt-2 text-lg font-semibold text-[#FF7300]">
+                                Position: {candidateData.jobTitle}
+                            </p>
+                        )}
                         <p className="mt-2 text-gray-500">
                             EquiHire ensures a fair process. Your voice will be masked and your identity protected until the final stage.
                         </p>

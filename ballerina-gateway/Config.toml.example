@@ -1,4 +1,17 @@
-[ballerina_gateway]
 pythonServiceUrl = "http://localhost:8000"
-asgardeoOrgUrl = "https://api.asgardeo.io/t/your_org_name"
-asgardeoJwksUrl = "https://api.asgardeo.io/t/your_org_name/oauth2/jwks"
+asgardeoTokenAudience = "EquiHire-Core"
+frontendUrl = "http://localhost:5173"
+
+# Brevo SMTP Configuration
+smtpHost = "smtp-relay.brevo.com"
+smtpPort = 587
+smtpUsername = "********@smtp-brevo.com"
+smtpPassword = "***********" 
+smtpFromEmail = "**********@gmail.com" 
+
+[database]
+host = "db.************.supabase.co"
+port = 5432
+user = "postgres"
+password = "**********"
+name = "postgres"
