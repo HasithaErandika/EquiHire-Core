@@ -6,3 +6,6 @@ transformers
 scikit-learn
 redis
 python-multipart
+boto3
+python-dotenv
+supabase

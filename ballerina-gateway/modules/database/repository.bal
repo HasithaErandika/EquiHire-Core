@@ -303,4 +303,98 @@ public client class Repository {
         return;
     }
 
+    # Creates a secure identity record (R2 Key mapping).
+    #
+    # + candidateId - Candidate UUID
+    # + r2ObjectKey - S3 Object Key
+    # + return - Error if failed
+    remote function createSecureIdentity(string candidateId, string r2ObjectKey, string jobId) returns error? {
+        // We first need to create the anonymous profile (since it's the parent key)
+        json anonPayload = {
+            "candidate_id": candidateId,
+            "skills": {}, // Empty initially, pending AI
+            "job_id": jobId
+        };
+
+        http:Response anonError = check self.httpClient->post("/rest/v1/anonymous_profiles", anonPayload, headers = self.headers);
+        if anonError.statusCode >= 300 {
+            json errorBody = check anonError.getJsonPayload();
+            return error("Failed to create anonymous profile: " + errorBody.toString());
+        }
+
+        // Then create the secure identity
+        json payload = {
+            "candidate_id": candidateId,
+            "r2_object_key": r2ObjectKey,
+            "job_id": jobId
+        };
+
+        http:Response response = check self.httpClient->post("/rest/v1/secure_identities", payload, headers = self.headers);
+
+        if response.statusCode >= 300 {
+            json errorBody = check response.getJsonPayload();
+            return error("Supabase Error: " + errorBody.toString());
+        }
+        return;
+    }
+
+    # Creates a new Job.
+    #
+    # + title - Job title
+    # + description - Job description
+    # + requiredSkills - Skills
+    # + screeningQuestions - Questions
+    # + organizationId - Org ID
+    # + recruiterId - Recruiter ID
+    # + return - Job ID or Error
+    remote function createJob(string title, string description, string[] requiredSkills, string[] screeningQuestions, string organizationId, string recruiterId) returns string|error {
+        json payload = {
+            "title": title,
+            "description": description,
+            "required_skills": requiredSkills,
+            "screening_questions": screeningQuestions,
+            "organization_id": organizationId,
+            "recruiter_id": recruiterId
+        };
+
+        http:Response response = check self.httpClient->post("/rest/v1/jobs", payload, headers = self.headers);
+
+        if response.statusCode >= 300 {
+            json errorBody = check response.getJsonPayload();
+            return error("Supabase Error: " + errorBody.toString());
+        }
+
+        json body = check response.getJsonPayload();
+        json[] jobs = <json[]>body;
+        if jobs.length() > 0 {
+            map<json> job = <map<json>>jobs[0];
+            return job["id"].toString();
+        }
+        return error("Job creation failed");
+    }
+
+    # Retrieves job requirements (skills).
+    #
+    # + jobId - Job ID
+    # + return - List of required skills or Error
+    remote function getJobRequirements(string jobId) returns string[]|error {
+        string path = string `/rest/v1/jobs?select=required_skills&id=eq.${jobId}`;
+        http:Response response = check self.httpClient->get(path, headers = self.headers, targetType = http:Response);
+
+        if response.statusCode >= 300 {
+            return error("Supabase Error: " + response.statusCode.toString());
+        }
+
+        json body = check response.getJsonPayload();
+        json[] results = <json[]>body;
+
+        if results.length() == 0 {
+            return error("Job not found: " + jobId);
+        }
+
+        map<json> job = <map<json>>results[0];
+        json skillsJson = job["required_skills"];
+        return <string[]>skillsJson;
+    }
+
 }

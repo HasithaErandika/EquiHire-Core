@@ -1,218 +1,104 @@
-# EquiHire-Core: The Real-Time Cognitive Bias Firewall
+# EquiHire-Core: The 3-Stage Cognitive Bias Firewall
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Tech Stack](https://img.shields.io/badge/stack-WSO2%20%7C%20Python%20%7C%20React-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-MVP%20Development-orange)
+**"Evaluating Code, Not Context."**
 
-> **"Evaluating Code, Not Context."**
-
-**EquiHire** is an AI-driven intermediary layer for technical recruitment. It intercepts live audio from candidates during technical interviews, sanitizes their identity (voice, accent, and PII) in real-time using a hybrid microservices architecture, and presents recruiters with a purely semantic text stream. This ensures hiring decisions are based solely on technical merit, effectively acting as a firewall against unconscious bias.
+EquiHire is an AI-driven intermediary layer for technical recruitment. It transforms the traditional "Resume Black Hole" into a transparent, bias-free **3-Stage Hiring Funnel**. It intercepts live audio from candidates, sanitizes their identity in real-time, and presents recruiters with a purely semantic text stream.
 
 ---
 
-## 📑 Table of Contents
-- [The Problem](#-the-problem)
-- [The Solution](#-the-solution)
-- [System Architecture](#-system-architecture)
-- [Key Features](#-key-features)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Environment Variables](#-environment-variables)
-- [Project Structure](#-project-structure)
-- [The Team](#-the-team)
+## Table of Contents
+- [The Problem](#the-problem)
+- [The Solution: 3-Stage Funnel](#the-solution-3-stage-funnel)
+- [System Architecture](#system-architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Documentation](#documentation)
+- [Project Structure](#project-structure)
 
 ---
 
-## 🚩 The Problem
-Technical recruitment is plagued by unconscious biases that "Blind Hiring" tools fail to solve:
-1.  **The Accent Penalty:** Candidates with non-native accents are subconsciously rated lower on technical competence.
-2.  **Contextual Bias:** Hiring managers favor candidates from specific universities or demographics based on visual/auditory cues.
-3.  **The "Black Box" Rejection:** Rejected candidates rarely receive explainable feedback on *why* they failed.
+## The Problem
+Technical recruitment is broken:
+1.  **Volume vs. Quality:** Recruiters are overwhelmed by hundreds of CVs, often "auto-rejecting" good candidates based on keywords.
+2.  **The Accent Penalty:** Candidates with non-native accents are subconsciously rated lower on technical competence.
+3.  **Contextual Bias:** Hiring managers favor candidates from specific universities or demographics.
 
-## 💡 The Solution
-EquiHire replaces the video call with a **Sanitized Real-Time Data Stream**.
-1.  **Audio Interception:** We capture the candidate's voice via Twilio Media Streams.
-2.  **AI Sanitization:**
-    * **Whisper AI** transcribes audio to text (removing accent bias).
-    * **Fine-Tuned BERT** redacts PII like Names, Schools, and Locations (removing contextual bias).
-3.  **Explainable Feedback (XAI):** Our engine analyzes the gap between the candidate's answers and the job description to generate a "Growth Report" post-interview.
+## The Solution: 3-Stage Funnel
 
----
+EquiHire implements a **3-Stage Hiring Funnel** to filter noise and bias efficiently.
 
-## 🏗 System Architecture
-EquiHire utilizes a **Cloud-Native Hybrid Microservices** pattern hosted on **WSO2 Choreo**.
+### Stage 1: The Automated Gatekeeper (Filter)
+*   **Goal:** Instant reject of unqualified candidates.
+*   **Action:** Candidates upload their CV to a specific Job ID.
+*   **Agent:** The system automatically parses the PDF (securely in Cloudflare R2) and checks against "Must-Have Skills" (e.g., "Django", "Python").
+*   **Result:** Only candidates meeting the hard requirements move to Stage 2.
 
+### Stage 2: The Asynchronous AI Screener (Score)
+*   **Goal:** Test technical knowledge without using human time.
+*   **Action:** Passing candidates receive a "Start Screening" link (Voice/Text).
+*   **Agent:** An AI agent asks 3 technical screening questions defined by the recruiter.
+*   **Result:** Top-scoring candidates are Shortlisted for the Live Interview.
 
-
-* **Service A: The Gateway (Ballerina)** 🟢
-    * Handles high-concurrency WebSockets from Twilio.
-    * Manages Authentication (Asgardeo) and Database Logging.
-    * Routes traffic between the User and the AI Engine.
-* **Service B: The Brain (Python/FastAPI)** 🐍
-    * Hosts the AI Models (Whisper, BERT, Scikit-Learn).
-    * Processes raw audio chunks and returns sanitized JSON.
-* **Service C: The Dashboard (React + Vite)** ⚛️
-    * Real-time "Blind" Dashboard for recruiters.
-    * Audio-visualizer portal for candidates.
+### Stage 3: The Live Blind Interview (The Bias Firewall)
+*   **Goal:** Deep technical culture check (Bias-Free).
+*   **Action:** Use **EquiHire Live** for the interview.
+*   **The Firewall:**
+    *   **Audio Interception:** We capture the candidate's voice.
+    *   **AI Sanitization:** Real-time transcription + BERT-NER redaction remove names, locations, and schools.
+    *   **Recruiter View:** Sees only technical merit in a text stream.
 
 ---
 
-## 🔐 Identity Lifecycle (Asgardeo Integration)
+## System Architecture
 
-Here is the step-by-step workflow of how the Interviewer (Recruiter) and Candidate interact, specifically focusing on how **WSO2 Asgardeo** handles the Identity and Access Management (IAM) behind the scenes.
+EquiHire utilizes a cloud-native hybrid microservices pattern.
 
-### Phase 1: The Setup (Organization Creation)
-Before any interview happens, the company must exist in the system.
+### 1. The Gateway (Ballerina)
+-   **Orchestrator:** Manages the entire funnel (Jobs, Candidates, status updates).
+-   **Secure Uploads:** Generates presigned URLs for direct Cloudflare R2 uploads.
+-   **Enforcer:** Routes audio to OpenAI and text to the Python Firewall.
+-   **Endpoints:** `POST /jobs`, `POST /candidates/complete-upload`.
 
-1.  **The Sign-Up:**
-    *   **Action:** The Lead Recruiter (Admin) visits the web portal and clicks "Sign Up for Enterprise."
-    *   **Asgardeo's Role:**
-        *   The app redirects to the Asgardeo Login Page.
-        *   The Admin can use SSO (Single Sign-On). For example, if they work at WSO2, they sign in with their corporate Microsoft/Google account.
-        *   **Tech:** Asgardeo verifies the corporate credentials via OIDC (OpenID Connect).
+### 2. The Intelligence Engine (Python/FastAPI)
+-   **The Matcher:** Executes the Stage 1 filtering logic (Skills matching).
+-   **The Firewall:** Hosts the BERT-NER model for real-time redaction.
+-   **The Vault Keymaster:** Manages Cloudflare R2 credentials and secure reveals.
+-   **Integration:** Updates results directly to **Supabase**.
 
-2.  **Organization Provisioning:**
-    *   **Action:** Once logged in, the Admin creates their organization profile: "Virtusa - Tech Hiring Team".
-    *   **Asgardeo's Role:** EquiHire assigns this user the "Organization Admin" role in Asgardeo. This gives them permission to invite other recruiters.
+### 3. The Dashboard (React + Vite)
+-   Real-time "Blind" Dashboard for recruiters receiving only sanitized text.
+-   Candidate portal for microphone access and interview joining.
 
-### Phase 2: The Recruiter's Journey (Creating the Interview)
-Now the recruiter is logged in and ready to hire.
-
-1.  **Login:**
-    *   **Action:** Mr. Perera (Recruiter) logs in using his company email.
-    *   **Asgardeo:** Authenticates him and returns a JWT (JSON Web Token). This token contains a claim: `role: "RECRUITER"`.
-    *   **EquiHire Backend:** Checks the token. "Okay, this is Mr. Perera from Virtusa. Show him the Virtusa Dashboard."
-
-2.  **Scheduling the Session:**
-    *   **Action:** He clicks "New Session" on the dashboard.
-    *   **Input:** Job Role (Senior Python Engineer), Candidate Email (sarah.j@gmail.com), Date/Time.
-    *   **The Trigger:** When he clicks "Send Invite," the Ballerina Gateway wakes up.
-
-### Phase 3: The "Magic" Invitation (Asgardeo Integration)
-This is the most critical part for User Experience. Candidates should NOT have to create a complex account with a password.
-
-1.  **Backend Logic (Ballerina):**
-    *   The Ballerina service receives the request: "Invite sarah.j@gmail.com."
-    *   It calls the Asgardeo **SCIM 2.0 API** (System for Cross-domain Identity Management).
-    *   **Command:** "Create a temporary user for Sarah."
-
-2.  **The "Magic Link" Dispatch:**
-    *   **Asgardeo's Role:** It generates a Passwordless Login Link (or a One-Time Code).
-    *   **Email:** Asgardeo (or your Ballerina service via an Email SDK) sends an email to Sarah: *"You have been invited to a Blind Interview with [Company Redacted]. Click here to join."*
-
-### Phase 4: The Candidate's Journey (The Login)
-Sarah receives the email.
-
-1.  **The Click:**
-    *   **Action:** Sarah clicks the link in her email.
-    *   **Asgardeo's Role:**
-        *   The link redirects her to Asgardeo.
-        *   Asgardeo verifies the unique token in the URL. **No password required.**
-        *   It redirects her back to the EquiHire Candidate Portal.
-
-2.  **The "Waiting Room" (Lobby):**
-    *   **Action:** Sarah lands on the "Mic Test" page.
-    *   **Security:**
-        *   The React App holds a Candidate Access Token.
-        *   This token has restricted permissions: `scope: "candidate_view"`.
-        *   She cannot see the Recruiter's dashboard. She cannot see other candidates.
-
-### Phase 5: The Interview (The Connection)
-The connection is established.
-
-1.  **Connecting to the Room:**
-    *   **Action:** Sarah clicks "Join Interview."
-    *   **Ballerina Gateway:**
-        *   It checks her Token: "Is this Sarah? Is she scheduled for this time?"
-        *   **Verification Success:** It opens the WebSocket Audio Stream.
-
-2.  **The End of the Session:**
-    *   **Action:** The interview finishes.
-    *   **Asgardeo:** The "Guest Session" expires. If Sarah tries to click the link again tomorrow, it will say "Link Expired." This prevents unauthorized access.
-
-### Summary of Roles
-
-| Actor | Asgardeo Feature Used | Experience |
-| :--- | :--- | :--- |
-| **Recruiter** | Enterprise SSO (OIDC) | Logs in with Company Email (Gmail/Outlook). Setup is permanent. |
-| **Candidate** | Passwordless Login (Magic Link) | No registration form. No "Forgot Password." Just one click to enter. |
-| **System** | RBAC (Role-Based Access Control) | Ensures Candidates can't see grading sheets and Recruiters can't see the Candidate's real name until the end. |
+For a detailed deep-dive into the live voice architecture, see [Voice Architecture](doc/voice-architecture.md).
 
 ---
 
-## 🚀 Key Features
-
-### 🧠 AI Capabilities
-
-* **Context-Aware Transcription:**
-* **Engine:** OpenAI Whisper (API Mode).
-* **Innovation:** Implements "Context Priming" by injecting a glossary of Sri Lankan technical terms (e.g., "Moratuwa", "HND", "Batch Top") into the prompt to resolve accent ambiguities and eliminate hallucinations.
-
-* **Real-Time Redaction (The Firewall):**
-* **Engine:** Fine-Tuned BERT (`bert-base-ner`).
-* **Innovation:** Specifically fine-tuned on a custom dataset of Sri Lankan entities to detect and mask local PII (e.g., `[School]`, `[Location]`, `[Religion]`) that standard models miss.
-
-* **Deterministic Scoring (The Judge):**
-* **Engine:** Scikit-Learn (Cosine Similarity & TF-IDF).
-* **Innovation:** Converts candidate answers and job descriptions into vector space to calculate a mathematically provable "Relevance Score," ensuring grading is objective and free from LLM hallucinations.
-
-* **Generative Feedback & Auditor (The Safety Valve):**
-* **Engine:** **Google Gemini**.
-* **Innovation:** Acts as a dual-layer system:
-1. **Narrator:** Converts raw Scikit-Learn scores into human-readable "Growth Reports" for rejected candidates.
-2. **Auditor:** Performs a secondary "Safety Check" on transcripts to flag subtle PII that the BERT model might have missed before the recruiter sees the text.
-
----
-
-### 🛠 Software Modules
-1.  **Secure Identity:** Magic Link login & Role-Based Access Control (RBAC) via **WSO2 Asgardeo**.
-2.  **Live Stream Orchestrator:** Low-latency (<2s) WebSocket pipeline via **Ballerina**.
-3.  **Blind Dashboard:** A React UI that hides the candidate's identity until grading is submitted.
-4.  **Audit Trail:** Immutable logs of "Original vs. Redacted" text for HR compliance.
-
----
-
-## 💻 Tech Stack
+## Tech Stack
 
 | Domain | Technology |
 | :--- | :--- |
-| **Frontend** | React (Vite), TypeScript, Tailwind CSS, Shadcn/UI |
+| **Frontend** | React (Vite), TypeScript, Tailwind CSS |
 | **Gateway Service** | **Ballerina** (Swan Lake) |
-| **AI Service** | Python 3.10, FastAPI, PyTorch, Transformers |
-| **Infrastructure** | **WSO2 Choreo** (Hosting), **WSO2 Bijira** (API Gateway) |
+| **AI Service** | Python 3.10, FastAPI, PyTorch (BERT), Supabase-py |
+| **Realtime AI** | OpenAI Realtime API (WebSocket) |
 | **Identity** | **WSO2 Asgardeo** (OIDC/OAuth2) |
-| **Communication** | Twilio Programmable Voice (Media Streams) |
-| **Database** | PostgreSQL (Neon/Supabase), Redis (Caching) |
+| **Communication** | Twilio Programmable Voice |
+| **Database** | PostgreSQL (Supabase) |
+| **Storage** | **Cloudflare R2** (S3 Compatible) |
 
 ---
 
-## 🔌 API Reference
-
-### 🏢 Organization Management
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| **POST** | `/api/organizations` | Registers a new organization and its admin recruiter. Requires `OrganizationRequest` body. |
-| **GET** | `/api/me/organization` | Retrieves organization details for the logged-in user. Query param: `userId`. |
-| **PUT** | `/api/organization` | Updates organization details (Industry/Size). Requires `OrganizationResponse` body. |
-
-### 📩 Interview Invitations
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| **POST** | `/api/invitations` | Creates a magic link invitation for a candidate. Triggers an email via SMTP. |
-| **GET** | `/api/invitations/validate/{token}` | Validates a candidate's magic link token. Checks expiration (7 days) and usage status. |
-
----
-
-## ⚡ Getting Started
+## Getting Started
 
 ### Prerequisites
-* Docker & Docker Compose
-* Python 3.10+
-* Ballerina (Swan Lake Update 8+)
-* Node.js 18+
+*   Ballerina (Swan Lake Update 8+)
+*   Python 3.10+
+*   Node.js 18+
+*   Supabase Account (Database)
+*   OpenAI API Key (Transcription)
+*   Cloudflare R2 Account (Secure Storage)
 
-### Installation (Monorepo)
+### Installation
 
 1.  **Clone the Repository**
     ```bash
@@ -220,126 +106,240 @@ The connection is established.
     cd EquiHire-Core
     ```
 
-- [Ballerina](https://ballerina.io/downloads/) (Swan Lake Update 8+)
-- [Node.js](https://nodejs.org/) (v18+)
-- [Python](https://www.python.org/) (v3.9+)
-- [Docker](https://www.docker.com/) (Optional, for containerization)
-- [Supabase Account](https://supabase.com/) (for Database)
+2.  **Database Setup (Supabase)**
+    Run the SQL scripts in `supabase_schema.sql` via your Supabase SQL Editor.
 
-### 1. Database Setup (Supabase)
-1. Create a new project in Supabase.
-2. Go to the **SQL Editor** and run the following scripts in order:
-   - `init.sql` (Base tables)
-   - `supabase_schema.sql` (Organizations & Recruiters)
-   - `interview_invitations_schema.sql` (Magic Link Auth)
+3.  **Backend Gateway (Ballerina)**
+    ```bash
+    cd ballerina-gateway
+    cp Config.toml.example Config.toml
+    # IMPORTANT: Update Config.toml with your keys.
+    # Note: R2 'accessKeyId' is a string ID, not a URL.
+    bal run
+    ```
 
-### 2. Backend Gateway (Ballerina)
-1. Navigate to the gateway directory:
-   ```bash
-   cd ballerina-gateway
-   ```
-2. Configure your credentials in `Config.toml`:
-   - Set `smtpPassword` (SMTP Master Password)
-   - Set `db.host`, `db.user`, `db.password` (from Supabase)
-3. Run the service:
-   ```bash
-   bal run
-   ```
+4.  **AI Intelligence Engine (Python)**
+    ```bash
+    cd python-ai-engine
+    pip install -r requirements.txt
+    
+    # Create .env file
+    cp .env.example .env
+    
+    # Update .env with:
+    # - OPENAI_API_KEY
+    # - R2 Credentials
+    # - SUPABASE_URL & SUPABASE_KEY
+    
+    uvicorn main:app --port 8000 --reload
+    ```
 
-### 3. Frontend (React)
-1. Navigate to the frontend directory:
-   ```bash
-   cd react-frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-### 4. AI Engine (Python)
-1. Navigate to the engine directory:
-   ```bash
-   cd python-ai-engine
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run the engine:
-   ```bash
-   uvicorn main:app --reload
-   ```
+5.  **Frontend (React)**
+    ```bash
+    cd react-frontend
+    npm install
+    npm run dev
+    ```
 
 ---
 
-## ⚙️ Configuration
+## Documentation
 
-### Ballerina Gateway (Backend)
-Refer to `ballerina-gateway/Config.toml.example` for the required configurations.
-1.  Copy `Config.toml.example` to `Config.toml`.
-2.  Fill in your Database credentials (Supabase/Postgres).
-3.  Configure your SMTP settings (Generic Ballerina Email Connector).
-4.  Add your Asgardeo Identity Provider URLs.
+We have detailed documentation available in the `doc/` folder:
 
-### React Frontend (UI)
-Refer to `react-frontend/.env.example` (or create one based on requirements).
-1.  Create a `.env` file in `react-frontend/`.
-2.  Add your Asgardeo Client ID and Base URL.
+-   **[System Overview](doc/README.md)**: General guide.
+-   **[Voice Architecture](doc/voice-architecture.md)**: Explains the "Bias Firewall" and PII redaction flow.
+-   **[API Reference](doc/api-endpoints.md)**: List of HTTP and WebSocket endpoints.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 EquiHire-Core/
 ├── ballerina-gateway/       # [BACKEND] API Gateway & Orchestrator
 │   ├── modules/
-│   │   ├── database/        # Database Interactions (Repository Pattern)
-│   │   ├── email/           # Email Logic (SMTP)
-│   │   └── types/           # Shared DTOs
-│   ├── api.bal              # REST API Service
-│   ├── service.bal          # WebSocket Services
-│   ├── Config.toml          # Local Configuration (GitIgnored)
-│   └── Config.toml.example  # Template Configuration
+│   │   ├── database/        # Supabase Repository
+│   │   ├── types/           # Data Models (Jobs, Candidates)
+│   │   └── ...
+│   ├── api.bal              # REST API (Jobs, Candidates, R2)
+│   └── service.bal          # WebSocket Services (The Relay)
 │
-├── react-frontend/          # [FRONTEND] Recruiter Dashboard & Candidate Portal
-│   ├── src/
-│   │   ├── pages/           # Application Views
-│   │   └── components/      # Reusable UI Components
-│   ├── .env                 # Local Environment Variables (GitIgnored)
-│   └── vite.config.ts
+├── python-ai-engine/        # [AI ENGINE] PII Redaction & Matcher
+│   ├── main.py              # Firewall & Eligibility Logic
+│   └── requirements.txt
 │
-├── python-ai-engine/        # [AI ENGINE] Processing Service
-│   ├── main.py
-│   └── text_processing/
+├── react-frontend/          # [FRONTEND] Recruiter Dashboard
 │
-├── docker-compose.yml       # Orchestration
+├── doc/                     # Documentation
+├── supabase_schema.sql      # Database Schema
 └── README.md
 ```
 
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+
+EquiHire is an AI-driven intermediary layer for technical recruitment. It intercepts live audio from candidates during technical interviews, sanitizes their identity (voice, accent, and PII) in real-time using a hybrid microservices architecture, and presents recruiters with a purely semantic text stream. This ensures hiring decisions are based solely on technical merit, effectively acting as a firewall against unconscious bias.
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
+## Table of Contents
+- [The Problem](#the-problem)
+- [The Solution](#the-solution)
+- [System Architecture](#system-architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Documentation](#documentation)
+- [Project Structure](#project-structure)
 
 ---
 
-## 🌳 Branching Strategy
+## The Problem
+Technical recruitment is plagued by unconscious biases that "Blind Hiring" tools fail to solve:
+1.  **The Accent Penalty:** Candidates with non-native accents are subconsciously rated lower on technical competence.
+2.  **Contextual Bias:** Hiring managers favor candidates from specific universities or demographics based on visual/auditory cues.
+3.  **The "Black Box" Rejection:** Rejected candidates rarely receive explainable feedback on why they failed.
 
-To maintain a professional and stable codebase, we follow a strict branching strategy:
+## The Solution
+EquiHire replaces the video call with a **Sanitized Real-Time Data Stream**.
+1.  **Audio Interception:** We capture the candidate's voice via Twilio Media Streams (or Browser WebSocket).
+2.  **AI Sanitization (The Firewall):**
+    -   **OpenAI Realtime API** handles low-latency transcription.
+    -   **Fine-Tuned BERT** performs Named Entity Recognition (NER) to redact PII (Names, Schools, Locations) *before* the recruiter sees the text.
+3.  **Secure CV Vault:**
+    -   **Cloudflare R2** acts as a private vault for original resumes.
+    -   **Blind Parsing**: AI extracts skills without exposing the file.
+    -   **On-Demand Reveal**: Recruiters can only unlock the original PDF via a temporary (5-minute) signed link.
+4.  **Explainable Feedback (XAI):** Our engine analyzes the gap between the candidate's answers and the job description to generate a "Growth Report" post-interview.
 
-| Branch | Purpose |
+---
+
+## System Architecture
+
+EquiHire utilizes a cloud-native hybrid microservices pattern.
+
+### 1. The Gateway (Ballerina)
+-   Handles high-concurrency WebSockets from Twilio and Frontend.
+-   Manages Identity (Asgardeo) and Authentication.
+-   **Orchestrator**: Routes audio to OpenAI, text to the Python Firewall, and manages secure R2 uploads.
+-   **Enforcer**: Ensures no unredacted text ever reaches the Recruiter UI.
+
+### 2. The Firewall (Python/FastAPI)
+-   Hosts the BERT-NER model.
+-   **The Vault Keymaster**: Manages Cloudflare R2 credentials.
+-   **Secure Reveal**: Generates time-limited Presigned URLs for file access.
+-   asynchronously computes technical competency scores.
+
+### 3. The Dashboard (React + Vite)
+-   Real-time "Blind" Dashboard for recruiters receiving only sanitized text.
+-   Candidate portal for microphone access and interview joining.
+
+For a detailed deep-dive into the live voice architecture, see [Voice Architecture](doc/voice-architecture.md).
+
+---
+
+## Tech Stack
+
+| Domain | Technology |
 | :--- | :--- |
-| **`main`** | **Production-Ready Code.** This branch is protected. No direct commits allowed. It only contains stable releases. |
-| **`develop`** | **Integration Branch.** The main working branch where all development happens. |
+| **Frontend** | React (Vite), TypeScript, Tailwind CSS |
+| **Gateway Service** | **Ballerina** (Swan Lake) |
+| **AI Service** | Python 3.10, FastAPI, PyTorch (BERT) |
+| **Realtime AI** | OpenAI Realtime API (WebSocket) |
+| **Identity** | **WSO2 Asgardeo** (OIDC/OAuth2) |
+| **Communication** | Twilio Programmable Voice |
+| **Database** | PostgreSQL (Supabase) |
+| **Storage** | **Cloudflare R2** (S3 Compatible) |
 
-### How to Contribute
-1.  Checkout the `develop` branch.
-2.  Make your changes and verify them.
-3.  Push to `develop` (or create a PR if required).
+---
+
+## Getting Started
+
+### Prerequisites
+*   Ballerina (Swan Lake Update 8+)
+*   Python 3.10+
+*   Node.js 18+
+*   Supabase Account (for Database)
+*   OpenAI API Key (for Transcription)
+*   Cloudflare R2 Account (for Secure Storage)
+
+### Installation
+
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/YourUsername/EquiHire-Core.git
+    cd EquiHire-Core
+    ```
+
+2.  **Database Setup (Supabase)**
+    Run the SQL scripts in `supabase_schema.sql` via your Supabase SQL Editor.
+
+3.  **Backend Gateway (Ballerina)**
+    ```bash
+    cd ballerina-gateway
+    cp Config.toml.example Config.toml
+    # Update Config.toml with your keys (Supabase, OpenAI, R2)
+    bal run
+    ```
+
+4.  **AI Firewall (Python)**
+    ```bash
+    cd python-ai-engine
+    pip install -r requirements.txt
+    
+    # Export R2 Credentials
+    export R2_ACCOUNT_ID="<your_account_id>"
+    export R2_ACCESS_KEY_ID="<your_access_key>"
+    export R2_SECRET_ACCESS_KEY="<your_secret_key>"
+    
+    uvicorn main:app --port 8000 --reload
+    ```
+
+5.  **Frontend (React)**
+    ```bash
+    cd react-frontend
+    npm install
+    npm run dev
+    ```
+
+---
+
+## Documentation
+
+We have detailed documentation available in the `doc/` folder:
+
+-   **[System Overview](doc/README.md)**: General guide.
+-   **[Voice Architecture](doc/voice-architecture.md)**: Explains the "Bias Firewall" and PII redaction flow.
+-   **[API Reference](doc/api-endpoints.md)**: List of HTTP and WebSocket endpoints.
+
+---
+
+## Project Structure
+
+```
+EquiHire-Core/
+├── ballerina-gateway/       # [BACKEND] API Gateway & Orchestrator
+│   ├── modules/
+│   │   ├── openai/          # OpenAI Realtime Client
+│   │   └── ...
+│   ├── api.bal              # REST API Service (Includes R2 Logic)
+│   └── service.bal          # WebSocket Services (The Relay)
+│
+├── python-ai-engine/        # [AI ENGINE] PII Redaction Service
+│   └── main.py              # Firewall Endpoint (/sanitize) & Secure Reveal
+│
+├── react-frontend/          # [FRONTEND] Recruiter Dashboard
+│
+├── doc/                     # Documentation
+└── README.md
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License.

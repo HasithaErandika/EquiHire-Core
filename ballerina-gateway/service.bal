@@ -3,8 +3,12 @@ import ballerina/io;
 import ballerina/jwt;
 import ballerina/websocket;
 
+import equihire/gateway.openai;
+
 // --- Configuration ---
 configurable string pythonServiceUrl = ?;
+configurable string openAIKey = ?;
+
 // Asgardeo Configuration
 configurable string asgardeoOrgUrl = ?;
 configurable string asgardeoJwksUrl = ?;
@@ -21,7 +25,7 @@ map<websocket:Caller> webClients = {};
 
 // 1. WebSocket Service for Twilio Media Streams (Public)
 # WebSocket service to handle Twilio Media Streams.
-# transcribes audio using a Python AI service and broadcasts text to the frontend.
+# Orchestrates: Twilio (Audio) -> OpenAI (Transcribe) -> Python (Sanitize/Redact) -> Frontend (Display)
 service /streams on new websocket:Listener(9090) {
 
     resource function get .(http:Request req) returns websocket:Service|websocket:UpgradeError {
@@ -31,9 +35,15 @@ service /streams on new websocket:Listener(9090) {
 
 service class TwilioStreamService {
     *websocket:Service;
+    openai:Client? aiClient = ();
+    string streamSid = "";
 
-    remote function onOpen(websocket:Caller caller) {
+    remote function onOpen(websocket:Caller caller) returns error? {
         io:println("Twilio Stream Connected: ", caller.getConnectionId());
+
+        // Initialize OpenAI Realtime Client
+        // Pass 'onSanitizeRequired' as the callback for full sentences
+        self.aiClient = check new (openAIKey, self.onSanitizeRequired);
     }
 
     remote function onMessage(websocket:Caller caller, anydata data) returns error? {
@@ -41,27 +51,20 @@ service class TwilioStreamService {
         if msg is json {
             string|error event = (check msg.event).toString();
 
+            if event is string && event == "start" {
+                // Capture Stream SID if needed
+                io:println("Stream Started");
+            }
+
             if event is string && event == "media" {
                 json|error media = msg.media;
                 if media is json {
                     string|error payload = (check media.payload).toString();
                     if payload is string {
-                        // Call Python AI Engine
-                        json requestBody = {
-                            "session_id": "session-123",
-                            "audio_base64": payload
-                        };
-
-                        http:Response|error response = pythonClient->post("/transcribe", requestBody);
-
-                        if response is http:Response {
-                            json|error responseJson = response.getJsonPayload();
-                            if responseJson is json {
-                                string|error sanitizedText = (check responseJson.sanitized_text).toString();
-                                if sanitizedText is string {
-                                    broadcastToFrontend(sanitizedText);
-                                }
-                            }
+                        // STREAMING: Send Audio Chunk directly to OpenAI
+                        openai:Client? validClient = self.aiClient;
+                        if validClient is openai:Client {
+                            check validClient.sendAudio(payload);
                         }
                     }
                 }
@@ -69,8 +72,44 @@ service class TwilioStreamService {
         }
     }
 
+    // Callback: Triggered when OpenAI completes a sentence
+    function onSanitizeRequired(string text) returns error? {
+        io:println("FIREWALL: Analyzing sentence: ", text);
+
+        // 1. Call Python Bias Firewall (Sanitize)
+        json requestBody = {
+            "text": text,
+            "context": "live_interview"
+        };
+
+        http:Response|error response = pythonClient->post("/sanitize", requestBody);
+
+        if response is http:Response {
+            json|error responseJson = response.getJsonPayload();
+            if responseJson is json {
+                string|error sanitizedText = (check responseJson.sanitized_text).toString();
+                boolean|error piiDetected = (check responseJson.pii_detected).ensureType(boolean);
+
+                if sanitizedText is string {
+                    // 2. Broadcast Validated/Redacted text to Recruiter
+                    broadcastToFrontend(sanitizedText, piiDetected is boolean ? piiDetected : false);
+                }
+            }
+        } else {
+            io:println("Error calling Python Firewall: ", response);
+        }
+    }
+
     remote function onClose(websocket:Caller caller, int statusCode, string reason) {
         io:println("Twilio Stream Closed");
+        // Close OpenAI connection
+        openai:Client? validClient = self.aiClient;
+        if validClient is openai:Client {
+            var closeResult = validClient.close();
+            if closeResult is error {
+                io:println("Error closing OpenAI client: ", closeResult);
+            }
+        }
     }
 }
 
@@ -98,7 +137,11 @@ service /dashboard on dashboardListener {
         string[]? param = params["token"];
 
         if param is () || param.length() == 0 {
-            return error websocket:UpgradeError("Missing access token");
+            // For dev convenience, if no token, allow connection but warn.
+            // In prod, return error.
+            // return error websocket:UpgradeError("Missing access token");
+            io:println("Warning: Connecting without token for Dev mode");
+            return new DashboardService();
         }
 
         string token = param[0];
@@ -107,8 +150,9 @@ service /dashboard on dashboardListener {
         jwt:Payload|jwt:Error result = jwt:validate(token, jwtValidatorConfig);
 
         if result is jwt:Error {
-            // For dev/demo without valid token, you might want to bypass or log
-            return error websocket:UpgradeError("Invalid access token: " + result.message());
+            io:println("Invalid Token: ", result.message());
+            // For dev, verify if signature check failed vs expiration
+            return error websocket:UpgradeError("Invalid access token");
         }
 
         return new DashboardService();
@@ -132,9 +176,13 @@ service class DashboardService {
 
 // --- Helper Functions ---
 
-function broadcastToFrontend(string message) {
+function broadcastToFrontend(string message, boolean piiDetected) {
     foreach var caller in webClients {
-        json msg = {"type": "transcription", "text": message};
+        json msg = {
+            "type": "transcription",
+            "text": message,
+            "pii_detected": piiDetected
+        };
         var err = caller->writeMessage(msg);
         if err is error {
             io:println("Error broadcasting to client: ", err);

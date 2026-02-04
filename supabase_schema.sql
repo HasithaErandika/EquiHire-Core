@@ -126,3 +126,62 @@ $$ LANGUAGE plpgsql;
 -- Grant necessary permissions (adjust based on your Supabase setup)
 -- GRANT SELECT, INSERT, UPDATE ON public.interview_invitations TO authenticated;
 -- GRANT SELECT ON public.interview_invitations TO anon;
+
+-- Anonymous Profiles (Extracted Skills)
+CREATE TABLE public.anonymous_profiles (
+    candidate_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    skills JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Secure Identities (Vault for R2 Keys)
+CREATE TABLE public.secure_identities (
+    candidate_id UUID PRIMARY KEY REFERENCES public.anonymous_profiles(candidate_id),
+    r2_object_key VARCHAR(1024) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS Policies
+ALTER TABLE public.anonymous_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.secure_identities ENABLE ROW LEVEL SECURITY;
+
+-- Allow public insertion (for now) or restricted to service role
+-- For MVP, we'll allow Authenticated/Anon read access to anonymous_profiles
+CREATE POLICY "Public read anonymous profiles" 
+ON public.anonymous_profiles
+FOR SELECT USING (true);
+
+-- Jobs Table (For Hiring Funnel)
+CREATE TABLE public.jobs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    organization_id UUID REFERENCES public.organizations(id),
+    recruiter_id UUID REFERENCES public.recruiters(id),
+    
+    -- Filter Logic
+    required_skills JSONB, -- ["Python", "Django", "RestAPI"]
+    screening_questions JSONB, -- ["Explain Dependency Injection", "What is ACID?"]
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS for Jobs
+ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Recruiters can view own jobs" ON public.jobs
+    FOR SELECT USING (
+        organization_id IN (SELECT organization_id FROM public.recruiters WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Recruiters can create jobs" ON public.jobs
+    FOR INSERT WITH CHECK (
+        organization_id IN (SELECT organization_id FROM public.recruiters WHERE user_id = auth.uid())
+    );
+
+-- Link Candidates to Jobs
+ALTER TABLE public.anonymous_profiles 
+ADD COLUMN job_id UUID REFERENCES public.jobs(id);
+
+ALTER TABLE public.anonymous_profiles
+ADD COLUMN status VARCHAR(50) DEFAULT 'applied'; -- 'applied', 'auto-rejected', 'screening', 'shortlisted', 'rejected'

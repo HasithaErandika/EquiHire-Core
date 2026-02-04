@@ -84,3 +84,74 @@ public type SupabaseConfig record {
     string url;
     string key;
 };
+
+# R2 (S3) connection configuration.
+#
+# + accessKeyId - R2 Access Key ID
+# + secretAccessKey - R2 Secret Access Key
+# + accountId - Cloudflare Account ID
+# + bucketName - Bucket Name
+# + region - Region (auto)
+public type R2Config record {
+    string accessKeyId;
+    string secretAccessKey;
+    string accountId;
+    string bucketName;
+    string region;
+};
+
+# Response for Upload URL request.
+#
+# + uploadUrl - The presigned URL for PUT request
+# + candidateId - The UUID generated for the candidate
+# + objectKey - The storage key in R2
+public type UploadUrlResponse record {
+    string uploadUrl;
+    string candidateId;
+    string objectKey;
+};
+
+# Request to complete upload and trigger parsing.
+#
+# + candidateId - The candidate UUID
+# + objectKey - The R2 object key
+# + jobId - The Job ID
+public type CompleteUploadRequest record {
+    string candidateId;
+    string objectKey;
+    string jobId;
+};
+
+# Response for Reveal request.
+#
+# + url - The secure URL
+# + status - Status of generation
+public type RevealResponse record {
+    string? url;
+    string status;
+};
+
+# Request to create a new Job.
+#
+# + title - Job title
+# + description - Job description
+# + requiredSkills - List of required skills
+# + screeningQuestions - List of screening questions
+# + organizationId - Organization ID
+# + recruiterId - Recruiter ID
+public type JobRequest record {
+    string title;
+    string description;
+    string[] requiredSkills;
+    string[] screeningQuestions;
+    string organizationId;
+    string recruiterId;
+};
+
+# Response for Job creation.
+#
+# + id - Job ID
+public type JobResponse record {
+    string id;
+};
+
