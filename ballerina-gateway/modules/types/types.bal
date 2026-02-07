@@ -159,3 +159,30 @@ public type JobResponse record {
     string id;
 };
 
+# Request to evaluate an answer using Gemini.
+#
+# + candidateAnswer - The answer provided by the candidate
+# + question - The technical question
+# + modelAnswer - The model answer for comparison
+# + experienceLevel - Candidate's experience level (Junior/Senior)
+# + strictness - Grading strictness
+public type EvaluationRequest record {
+    string candidateAnswer;
+    string question;
+    string modelAnswer;
+    string experienceLevel = "Junior";
+    string strictness = "Moderate";
+};
+
+# Response from evaluation.
+#
+# + redactedAnswer - Privacy-safe version of the answer
+# + score - Technical score (0-10)
+# + feedback - Growth report / feedback
+# + piiDetected - Whether PII was found
+public type EvaluationResponse record {
+    string redactedAnswer;
+    decimal score;
+    string feedback;
+    boolean piiDetected;
+};

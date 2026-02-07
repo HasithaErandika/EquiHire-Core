@@ -2,18 +2,18 @@
 
 **"Evaluating Code, Not Context."**
 
-EquiHire is an AI-Native Blind Assessment Platform designed to act as an objective "Bias Firewall" for technical recruitment. It utilizes a **Tri-Agent Cognitive Engine** to sanitize candidate identity and evaluate technical merit through semantic analysis, ensuring hiring decisions are based strictly on logic, not background.
+EquiHire is an AI-Native Blind Assessment Platform designed to act as an objective "Bias Firewall" for technical recruitment. It utilizes a **Agent Cognitive Engine** to sanitize candidate identity and evaluate technical merit through semantic analysis, ensuring hiring decisions are based strictly on logic, not background.
 
 ---
 
 ## Key Features
 
-*   **Bias Firewall:** Automatically redacts PII (Names, Gender, University) using the **Censor Agent** (GLiNER).
-*   **Semantic Scoring:** Evaluates logic over keywords using the **Judge Agent** (SBERT).
-*   **Instant Feedback:** Generates personalized "Growth Reports" for candidates using the **Auditor Agent** (Gemini AI).
+*   **Context Extraction:** Analyzes candidate CVs to determine experience level (Junior/Senior) and adjust grading strictness.
+*   **Privacy Redaction:** Automatically identifies and redacts PII (Names, Universities) from written answers using **Gemini 1.5 Flash** to ensure bias-free evaluation.
+*   **Adaptive Scoring & Feedback:** Evaluates technical accuracy and generates personalized "Growth Reports" explaining knowledge gaps.
 *   **Lockdown Assessment:** Secure, anti-cheating exam environment.
 
-👉 **[Read the Full Introduction & Problem Statement](doc/introduction.md)**
+**[Read the Full Introduction & Problem Statement](doc/introduction.md)**
 
 ---
 
