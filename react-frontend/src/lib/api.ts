@@ -67,8 +67,22 @@ export const API = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ questions }),
         });
-        if (!response.ok) throw new Error("Failed to save screening questions");
+        if (!response.ok) throw new Error("Failed to save questions");
         return response.json();
+    },
+
+    getJobQuestions: async (jobId: string) => {
+        const response = await fetch(`${API_BASE_url}/jobs/${jobId}/questions`);
+        if (!response.ok) throw new Error("Failed to fetch questions");
+        return response.json();
+    },
+
+    deleteQuestion: async (questionId: string) => {
+        const response = await fetch(`${API_BASE_url}/questions/${questionId}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error("Failed to delete question");
+        return response;
     },
 
     getJobs: async (userId: string) => {
