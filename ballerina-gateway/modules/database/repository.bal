@@ -409,7 +409,7 @@ public client class Repository {
         // Note: For efficiency, one might store OrgID in JWT or session, but here we look it up.
         // Assuming we pass OrgId or lookup. For now, let's filter by recruiter_id or organization_id.
 
-        string path = string `/rest/v1/jobs?recruiter_id=eq.${recruiterId}&select=id,title,created_at`;
+        string path = string `/rest/v1/jobs?recruiter_id=eq.${recruiterId}&select=id,title,organization_id,created_at`;
         http:Response response = check self.httpClient->get(path, headers = self.headers, targetType = http:Response);
 
         if response.statusCode >= 300 {
@@ -436,20 +436,25 @@ public client class Repository {
         return <json[]>body;
     }
 
-    remote function createJobQuestion(string jobId, string questionText, string sampleAnswer, string[] keywords, string questionType) returns error? {
+    remote function createJobQuestion(string jobId, string organizationId, string questionText, string sampleAnswer, string[] keywords, string questionType, int sortOrder) returns error? {
         json payload = {
-            "job_id": jobId,
-            "question_text": questionText,
-            "sample_answer": sampleAnswer,
-            "keywords": keywords,
-            "type": questionType
+           "job_id": jobId,
+           "organization_id": organizationId,
+           "question_text": questionText,
+           "sample_answer": sampleAnswer,
+           "keywords": keywords,
+           "question_type": questionType,
+           "sort_order": sortOrder
         };
 
-        http:Response response = check self.httpClient->post("/rest/v1/questions", payload, headers = self.headers);
-
+        http:Response response = check self.httpClient->post("/rest/v1/job_questions", payload, headers = self.headers);
+        if response.statusCode == 201 || response.statusCode == 200 {
+            return ();
+        }
         if response.statusCode >= 300 {
-            json errorBody = check response.getJsonPayload();
-            return error("Supabase Error: " + errorBody.toString());
+           json|error errorBody = response.getJsonPayload();
+           string message = errorBody is json ? errorBody.toString() : "Database insertion failed";
+           return error("Supabase Error: " + message);
         }
         return ();
     }
@@ -459,11 +464,12 @@ public client class Repository {
     # + jobId - Job ID
     # + return - List of questions or Error
     remote function getJobQuestions(string jobId) returns types:QuestionItem[]|error {
-        string path = string `/rest/v1/questions?job_id=eq.${jobId}&select=*&order=created_at.asc`;
+
+        string path = string `/rest/v1/job_questions?job_id=eq.${jobId}&select=*&order=sort_order.asc`; 
         http:Response response = check self.httpClient->get(path, headers = self.headers, targetType = http:Response);
 
         if response.statusCode >= 300 {
-            return error("Supabase Error: " + response.statusCode.toString());
+           return error("Supabase Error: " + response.statusCode.toString());
         }
 
         json body = check response.getJsonPayload();
@@ -471,41 +477,44 @@ public client class Repository {
 
         types:QuestionItem[] questions = [];
         foreach json result in results {
-            map<json> qData = <map<json>>result;
+           map<json> qData = <map<json>>result;
 
-            // Handle keywords conversion from JSONB/Array to string[]
-            // Supabase returns JSON array for JSONB column
-            string[] keywords = [];
-            if qData["keywords"] is json[] {
-                json[] kArray = <json[]>qData["keywords"];
+           string[] keywords = [];
+           if qData["keywords"] is json[] {
+               json[] kArray = <json[]>qData["keywords"];
                 foreach json k in kArray {
-                    keywords.push(k.toString());
+                   keywords.push(k.toString());
                 }
             }
 
             questions.push({
-                id: qData["id"].toString(),
-                jobId: qData["job_id"].toString(),
-                questionText: qData["question_text"].toString(),
-                sampleAnswer: qData["sample_answer"] is () ? "" : qData["sample_answer"].toString(),
-                keywords: keywords,
-                questionType: qData["type"].toString()
+               id: qData["id"].toString(),
+               jobId: qData["job_id"].toString(),
+               organizationId: qData["organization_id"].toString(),
+               questionText: qData["question_text"].toString(),
+               sampleAnswer: qData["sample_answer"] is () ? "" : qData["sample_answer"].toString(),
+               keywords: keywords,
+               questionType: qData["question_type"].toString(), // Match database column name
+               sortOrder: qData["sort_order"] is () ? 1 : <int>qData["sort_order"]
             });
         }
         return questions;
     }
 
     # Deletes a question.
-    #
     # + questionId - Question ID
     # + return - Error if failed
     remote function deleteQuestion(string questionId) returns error? {
-        string path = string `/rest/v1/questions?id=eq.${questionId}`;
-        http:Response response = check self.httpClient->delete(path, headers = self.headers, targetType = http:Response);
 
+        string path = string `/rest/v1/job_questions?id=eq.${questionId}`;
+        
+        http:Response response = check self.httpClient->delete(path, headers = self.headers, targetType = http:Response);
+        
         if response.statusCode >= 300 {
-            json errorBody = check response.getJsonPayload();
-            return error("Supabase Error: " + errorBody.toString());
+
+            json|error errorBody = response.getJsonPayload();
+            string message = errorBody is json ? errorBody.toString() : "Delete failed";
+            return error("Supabase Error: " + message);
         }
         return ();
     }
