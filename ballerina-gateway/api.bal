@@ -121,9 +121,9 @@ service /api on apiListener {
         string|error jobId = dbClient->createJob(
             payload.title,
             payload.description,
-            payload.requiredSkills, // This is a string[]
-            payload.organizationId, // This is a string
-            realRecruiterId         // This is a string
+            payload.requiredSkills, 
+            payload.organizationId,  
+            realRecruiterId 
         );
 
         if jobId is error {
@@ -134,7 +134,7 @@ service /api on apiListener {
     }
 
     # Saves screening questions for a specific job in bulk to the new structured table.
-    # 
+    #
     # + payload - List of questions with their metadata
     # + return - Created status or error
     resource function post jobs/questions(@http:Payload types:QuestionPayload payload) returns http:Created|http:InternalServerError|error {
@@ -142,18 +142,35 @@ service /api on apiListener {
             // Using '->' because createJobQuestion is a remote function
             error? result = dbClient->createJobQuestion(
                 q.jobId,
-                q.organizationId,
                 q.questionText,
-                q.questionType,
-                q.orderIndex,
-                q.isRequired
+                q.sampleAnswer,
+                q.keywords,
+                q.questionType
             );
 
             if result is error {
+                io:println("Error creating question: ", result.message());
                 return http:INTERNAL_SERVER_ERROR;
             }
         }
         return http:CREATED;
+    }
+
+    resource function get jobs/[string jobId]/questions() returns types:QuestionItem[]|http:InternalServerError|error {
+        types:QuestionItem[]|error questions = dbClient->getJobQuestions(jobId);
+        if questions is error {
+            io:println("Error fetching questions: ", questions.message());
+            return http:INTERNAL_SERVER_ERROR;
+        }
+        return questions;
+    }
+
+    resource function delete questions/[string questionId]() returns http:NoContent|http:InternalServerError|error {
+        error? result = dbClient->deleteQuestion(questionId);
+        if result is error {
+            return http:INTERNAL_SERVER_ERROR;
+        }
+        return http:NO_CONTENT;
     }
 
     # Retrieves all jobs for the authenticated recruiter.

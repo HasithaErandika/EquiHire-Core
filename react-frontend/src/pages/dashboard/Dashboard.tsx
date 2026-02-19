@@ -35,11 +35,12 @@ import InterviewScheduler from './views/Scheduler';
 import CandidateManager from './views/Candidates';
 import Integrations from './views/Integrations';
 import JobsManager from './views/Jobs';
+import QuestionsManager from './views/Questions';
 
 export default function Dashboard() {
     const { state, signOut } = useAuthContext();
     const [organization, setOrganization] = useState<{ id: string; name: string; industry: string; size: string } | null>(null);
-    const [activeTab, setActiveTab] = useState<"scheduler" | "candidates" | "integrations" | "jobs">("scheduler");
+    const [activeTab, setActiveTab] = useState<"scheduler" | "candidates" | "integrations" | "jobs" | "questions">("scheduler");
 
     // Settings State
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -108,6 +109,14 @@ export default function Dashboard() {
                     >
                         <SessionIcon className="mr-3 h-5 w-5" />
                         Candidates
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className={`w-full justify-start ${activeTab === 'questions' ? 'text-[#FF7300] bg-orange-50 hover:bg-orange-50 hover:text-[#FF7300]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                        onClick={() => setActiveTab('questions')}
+                    >
+                        <Check className="mr-3 h-5 w-5" />
+                        Questions
                     </Button>
                     <Button
                         variant="ghost"
@@ -263,8 +272,7 @@ export default function Dashboard() {
                         <div className="animate-in fade-in zoom-in-95 duration-300">
                             {activeTab === 'scheduler' && <InterviewScheduler />}
                             {activeTab === 'candidates' && <CandidateManager />}
-                            {activeTab === 'scheduler' && <InterviewScheduler />}
-                            {activeTab === 'candidates' && <CandidateManager />}
+                            {activeTab === 'questions' && <QuestionsManager />}
                             {activeTab === 'integrations' && <Integrations />}
                             {activeTab === 'jobs' && <JobsManager />}
                         </div>

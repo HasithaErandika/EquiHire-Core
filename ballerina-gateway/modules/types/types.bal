@@ -140,7 +140,6 @@ public type RevealResponse record {
 # + title - Job title
 # + description - Job description
 # + requiredSkills - List of required skills
-# + screeningQuestions - List of screening questions
 # + organizationId - Organization ID
 # + recruiterId - Recruiter ID
 public type JobRequest record {
@@ -186,8 +185,6 @@ public type EvaluationResponse record {
     boolean piiDetected;
 };
 
-
-
 # Represents the bulk request for job questions.
 #
 # + questions - List of individual question objects
@@ -195,19 +192,17 @@ public type QuestionPayload record {
     QuestionItem[] questions;
 };
 
-# Represents an individual screening question.
-#
+# + id - Question ID
 # + jobId - ID of the linked job
-# + organizationId - ID of the organization
 # + questionText - The actual question string
-# + questionType - Type of input (text, etc.)
-# + orderIndex - Sequence order
-# + isRequired - Whether candidate must answer
+# + sampleAnswer - Sample answer for the question
+# + keywords - Keywords expected in the answer
+# + questionType - Type of input (paragraph, code)
 public type QuestionItem record {
+    string? id;
     string jobId;
-    string organizationId;
     string questionText;
-    string questionType;
-    int orderIndex;
-    boolean isRequired;
+    string sampleAnswer;
+    string[] keywords;
+    string questionType = "paragraph";
 };

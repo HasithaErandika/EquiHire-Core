@@ -47,8 +47,6 @@ export default function CreateJob({ organizationId, onJobCreated }: CreateJobPro
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>("Languages");
-    const [screeningQuestions, setScreeningQuestions] = useState<string[]>([]);
-    const [currentQuestion, setCurrentQuestion] = useState('');
 
     const handleAddCustomSkill = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && currentSkill.trim()) {
@@ -64,17 +62,6 @@ export default function CreateJob({ organizationId, onJobCreated }: CreateJobPro
         } else {
             setSkills([...skills, skill]);
         }
-    };
-
-    const handleAddQuestion = () => {
-        if (currentQuestion.trim() && screeningQuestions.length < 5) {
-            setScreeningQuestions([...screeningQuestions, currentQuestion.trim()]);
-            setCurrentQuestion('');
-        }
-    };
-
-    const removeQuestion = (index: number) => {
-        setScreeningQuestions(screeningQuestions.filter((_, i) => i !== index));
     };
 
     // const handleCreateJob = async () => {
@@ -146,29 +133,15 @@ export default function CreateJob({ organizationId, onJobCreated }: CreateJobPro
                 // screeningQuestions is removed from here!
             };
 
-            const createdJob = await API.createJob(jobPayload);
+            await API.createJob(jobPayload);
 
-            // STEP 2: Send Questions to the new dedicated table
-            if (screeningQuestions.length > 0 && createdJob?.id) {
-                const questionsPayload = screeningQuestions.map((q, index) => ({
-                    jobId: createdJob.id,
-                    organizationId: organizationId,
-                    questionText: q,
-                    questionType: 'text',
-                    orderIndex: index,
-                    isRequired: true
-                }));
-
-                await API.createJobQuestions(questionsPayload);
-            }
-
-            setSuccess('Job and screening questions created successfully!');
+            setSuccess('Job role created successfully! You can now add interview questions in the Questions tab.');
 
             // Reset Form
             setTitle('');
             setDescription('');
             setSkills([]);
-            setScreeningQuestions([]);
+
             if (onJobCreated) onJobCreated();
 
         } catch (err: any) {
@@ -290,39 +263,7 @@ export default function CreateJob({ organizationId, onJobCreated }: CreateJobPro
                     </div>
                 </div>
 
-                {/* Screening Questions Section */}
-                <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                        <Label>Screening Questions (Max 5)</Label>
-                        <span className="text-xs text-gray-500">{screeningQuestions.length}/5</span>
-                    </div>
 
-                    <div className="space-y-2">
-                        {screeningQuestions.map((q, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                                <span className="text-gray-500 text-sm font-medium">Q{index + 1}:</span>
-                                <span className="flex-1 text-sm">{q}</span>
-                                <button onClick={() => removeQuestion(index)} className="text-gray-400 hover:text-red-500">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-
-                    {screeningQuestions.length < 5 && (
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="e.g. Explain Dependency Injection..."
-                                value={currentQuestion}
-                                onChange={(e) => setCurrentQuestion(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddQuestion()}
-                            />
-                            <Button onClick={handleAddQuestion} variant="outline" size="icon">
-                                <Plus className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    )}
-                </div>
 
                 <Button
                     onClick={handleCreateJob}
