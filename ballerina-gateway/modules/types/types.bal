@@ -199,10 +199,12 @@ public type QuestionPayload record {
 # + keywords - Keywords expected in the answer
 # + questionType - Type of input (paragraph, code)
 public type QuestionItem record {
-    string? id;
+    string? id = ();
     string jobId;
+    string organizationId; // Removed '?' to make it a mandatory string
     string questionText;
     string sampleAnswer;
     string[] keywords;
     string questionType = "paragraph";
+    int sortOrder = 1;
 };
