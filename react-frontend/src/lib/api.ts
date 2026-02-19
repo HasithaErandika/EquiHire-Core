@@ -61,14 +61,21 @@ export const API = {
         return response.json();
     },
 
+
     createJobQuestions: async (questions: any[]) => {
+
         const response = await fetch(`${API_BASE_url}/jobs/questions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ questions }),
         });
-        if (!response.ok) throw new Error("Failed to save questions");
-        return response.json();
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to save questions");
+        }
+
+        const text = await response.text();
+        return text ? JSON.parse(text) : {};
     },
 
     getJobQuestions: async (jobId: string) => {
