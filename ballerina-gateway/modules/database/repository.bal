@@ -330,8 +330,7 @@ public client class Repository {
         // Then create the secure identity
         json payload = {
             "candidate_id": candidateId,
-            "r2_object_key": r2ObjectKey,
-            "job_id": jobId
+            "r2_object_key": r2ObjectKey
         };
 
         http:Response response = check self.httpClient->post("/rest/v1/secure_identities", payload, headers = self.headers);
@@ -519,7 +518,7 @@ public client class Repository {
     # + organizationId - The organization ID
     # + return - An array of audit logs or an error
     remote function getAuditLogs(string organizationId) returns json[]|error {
-        string path = string `/rest/v1/audit_logs?organization_id=eq.${organizationId}&select=*&order=created_at.desc`;
+        string path = string `/rest/v1/audit_logs?organization_id=eq.${organizationId}&select=*,recruiters(email,full_name)&order=created_at.desc`;
         http:Response response = check self.httpClient->get(path, headers = self.headers, targetType = http:Response);
 
         if response.statusCode >= 300 {
@@ -528,6 +527,39 @@ public client class Repository {
 
         json body = check response.getJsonPayload();
         return <json[]>body;
+    }
+
+    # Creates an audit log entry.
+    # + organizationId - Organization ID
+    # + recruiterId - Recruiter ID (can be null/empty string)
+    # + actionType - Type of action
+    # + entityType - Type of entity
+    # + entityId - ID of entity
+    # + details - Additional details
+    # + return - Error if failed
+    remote function createAuditLog(string organizationId, string? recruiterId, string actionType, string entityType, string? entityId, map<json> details) returns error? {
+        json payload = {
+            "organization_id": organizationId,
+            "action_type": actionType,
+            "entity_type": entityType,
+            "details": details
+        };
+
+        map<json> payloadMap = <map<json>>payload;
+        if recruiterId is string && recruiterId != "" {
+            payloadMap["recruiter_id"] = recruiterId;
+        }
+        if entityId is string && entityId != "" {
+            payloadMap["entity_id"] = entityId;
+        }
+
+        http:Response response = check self.httpClient->post("/rest/v1/audit_logs", payloadMap, headers = self.headers);
+
+        if response.statusCode >= 300 {
+            json errorBody = check response.getJsonPayload();
+            return error("Supabase Error saving audit log: " + errorBody.toString());
+        }
+        return;
     }
 
     # Retrieves evaluation templates for an organization.
@@ -882,6 +914,47 @@ public client class Repository {
             return error("Supabase Error: " + message);
         }
         return;
+    }
+
+    # Saves a single candidate answer into the candidate_answers table.
+    # + candidateId - The candidate UUID
+    # + questionId - The question UUID
+    # + answerText - The candidate's answer text
+    # + return - Error if failed
+    remote function saveCandidateAnswer(string candidateId, string questionId, string answerText) returns error? {
+        json payload = {
+            "candidate_id": candidateId,
+            "question_id": questionId,
+            "answer_text": answerText
+        };
+
+        http:Response response = check self.httpClient->post("/rest/v1/candidate_answers", payload, headers = self.headers);
+
+        if response.statusCode >= 300 {
+            json errorBody = check response.getJsonPayload();
+            return error("Supabase Error saving answer: " + errorBody.toString());
+        }
+        return;
+    }
+
+    # Retrieves the organization_id for a given job.
+    # + jobId - The Job ID
+    # + return - The organization_id or error
+    remote function getOrgIdByJob(string jobId) returns string|error {
+        string path = string `/rest/v1/jobs?select=organization_id&id=eq.${jobId}`;
+        http:Response response = check self.httpClient->get(path, headers = self.headers, targetType = http:Response);
+
+        if response.statusCode >= 300 {
+            return error("Supabase Error: " + response.statusCode.toString());
+        }
+
+        json body = check response.getJsonPayload();
+        json[] results = <json[]>body;
+        if results.length() == 0 {
+            return error("Job not found: " + jobId);
+        }
+        map<json> job = <map<json>>results[0];
+        return job["organization_id"].toString();
     }
 
 }

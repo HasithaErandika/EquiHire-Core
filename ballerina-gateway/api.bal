@@ -63,8 +63,9 @@ listener http:Listener apiListener = new (9092);
 @http:ServiceConfig {
     cors: {
         allowOrigins: ["*"],
-        allowCredentials: true,
-        allowHeaders: ["Content-Type", "Authorization"]
+        allowCredentials: false,
+        allowHeaders: ["Content-Type", "Authorization"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
     }
 }
 service /api on apiListener {
@@ -129,6 +130,8 @@ service /api on apiListener {
         if jobId is error {
             return http:INTERNAL_SERVER_ERROR;
         }
+
+        _ = start dbClient->createAuditLog(payload.organizationId, realRecruiterId, "Create Job", "Job", <string>jobId, {"jobTitle": payload.title});
 
         return {id: jobId};
     }
@@ -399,6 +402,8 @@ service /api on apiListener {
 
         io:println("Invitation created with ID:", invitationId);
 
+        _ = start dbClient->createAuditLog(payload.organizationId, realRecruiterId, "Send Invitation", "Invitation", <string>invitationId, {"candidateEmail": payload.candidateEmail, "jobTitle": payload.jobTitle});
+
         // Generate magic link
         string magicLink = frontendUrl + "/invite/" + token;
 
@@ -491,7 +496,34 @@ service /api on apiListener {
         if logs is error {
             return http:INTERNAL_SERVER_ERROR;
         }
-        return logs;
+
+        json[] formattedLogs = [];
+        foreach json log in logs {
+            map<json> l = <map<json>>log;
+
+            string actor = "System";
+            var recruitersObj = l["recruiters"];
+            if recruitersObj is map<json> {
+                var email = recruitersObj["email"];
+                if email is string {
+                    actor = email;
+                }
+            }
+
+            // stringify details logic (frontend expects a string, so we'll just format it)
+            string detailsStr = l["details"].toString();
+
+            formattedLogs.push({
+                "id": l["id"].toString(),
+                "action": l["action_type"].toString(),
+                "actor": actor,
+                "target": l["entity_type"].toString(),
+                "details": detailsStr,
+                "created_at": l["created_at"].toString()
+            });
+        }
+
+        return formattedLogs;
     }
 
     resource function get organizations/[string organizationId]/evaluation\-templates() returns json[]|http:InternalServerError|error {
@@ -514,6 +546,9 @@ service /api on apiListener {
         if result is error {
             return http:INTERNAL_SERVER_ERROR;
         }
+
+        _ = start dbClient->createAuditLog(organizationId, (), "Create Evaluation Template", "EvaluationTemplate", (), {"templateName": name});
+
         return result;
     }
 
@@ -629,6 +664,86 @@ service /api on apiListener {
             emailSent: emailSent,
             message: msg
         };
+    }
+
+    // --- Candidate Assessment Submission ---
+    resource function post candidates/[string candidateId]/evaluate(@http:Payload json payload) returns json|http:InternalServerError|error {
+        io:println("Assessment submission received for candidate: ", candidateId);
+
+        map<json> data = <map<json>>payload;
+        string jobId = data["jobId"].toString();
+        json answersJson = data["answers"];
+        json[] answersArr = <json[]>answersJson;
+
+        // Save each answer to DB
+        foreach json ans in answersArr {
+            map<json> a = <map<json>>ans;
+            string questionId = a["questionId"].toString();
+            string answerText = a["answerText"].toString();
+
+            error? saveResult = dbClient->saveCandidateAnswer(candidateId, questionId, answerText);
+            if saveResult is error {
+                io:println("Error saving answer: ", saveResult.message());
+            }
+        }
+
+        // Fire-and-forget AI evaluation per answer
+        types:QuestionItem[]|error questions = dbClient->getJobQuestions(jobId);
+        if questions is types:QuestionItem[] {
+            foreach json ans in answersArr {
+                map<json> a = <map<json>>ans;
+                string questionId = a["questionId"].toString();
+                string answerText = a["answerText"].toString();
+
+                foreach types:QuestionItem q in questions {
+                    string qId = q.id ?: "";
+                    if qId == questionId {
+                        json evalPayload = {
+                            "candidate_answer": answerText,
+                            "question": q.questionText,
+                            "model_answer": q.sampleAnswer,
+                            "experience_level": "Junior",
+                            "strictness": "Moderate"
+                        };
+                        _ = start pythonClient->post("/evaluate", evalPayload, targetType = http:Response);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Log to audit
+        string|error orgId = dbClient->getOrgIdByJob(jobId);
+        if orgId is string {
+            _ = start dbClient->createAuditLog(orgId, (), "Submit Assessment", "Candidate", candidateId, {"jobId": jobId, "answerCount": answersArr.length()});
+        }
+
+        return {"status": "submitted", "candidateId": candidateId, "answersReceived": answersArr.length()};
+    }
+
+    // --- Lockdown Cheat Flag ---
+    resource function post candidates/[string candidateId]/flag\-cheating(@http:Payload json payload) returns json|http:InternalServerError|error {
+        io:println("Cheat flag received for candidate: ", candidateId);
+
+        map<json> data = <map<json>>payload;
+        string organizationId = data["organizationId"].toString();
+        json violations = data["violations"];
+
+        error? auditResult = dbClient->createAuditLog(
+            organizationId,
+            (),
+            "Lockdown Violation",
+            "Candidate",
+            candidateId,
+            <map<json>>violations
+        );
+
+        if auditResult is error {
+            io:println("Error logging cheat flag: ", auditResult.message());
+            return http:INTERNAL_SERVER_ERROR;
+        }
+
+        return {"status": "flagged", "candidateId": candidateId};
     }
 }
 

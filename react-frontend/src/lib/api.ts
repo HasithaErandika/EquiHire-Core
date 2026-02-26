@@ -223,4 +223,15 @@ export const API = {
         if (!response.ok) throw new Error("Failed to fetch audit logs");
         return response.json();
     },
+
+    // Lockdown Cheat Flagging
+    flagCheating: async (candidateId: string, organizationId: string, violations: Record<string, any>) => {
+        const response = await fetch(`${API_BASE_url}/candidates/${candidateId}/flag-cheating`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ organizationId, violations }),
+        });
+        if (!response.ok) throw new Error("Failed to flag cheating");
+        return response.json();
+    },
 };

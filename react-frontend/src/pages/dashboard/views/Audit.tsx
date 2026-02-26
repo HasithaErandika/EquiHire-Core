@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthContext } from "@asgardeo/auth-react";
 import { API } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Activity, Shield, Clock, Users, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Activity, Shield, Clock, Users, AlertCircle, RefreshCw } from "lucide-react";
 
 type AuditLog = {
     id: string;
@@ -17,7 +18,10 @@ export default function AuditAndStatistics() {
     const { state } = useAuthContext();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [stats, setStats] = useState({ total: 0, today: 0, actors: 0 });
+    const [lastSynced, setLastSynced] = useState<Date | null>(null);
+    const [orgId, setOrgId] = useState<string | null>(null);
 
     useEffect(() => {
         if (state.sub) {
@@ -25,23 +29,22 @@ export default function AuditAndStatistics() {
         }
     }, [state.sub]);
 
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        if (!orgId) return;
+        const interval = setInterval(() => {
+            refreshLogs(orgId);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [orgId]);
+
     const loadData = async (userId: string) => {
         setIsLoading(true);
         try {
             const org = await API.getOrganization(userId);
             if (org && org.id) {
-                const data = await API.getAuditLogs(org.id);
-                setLogs(data || []);
-
-                // Compute stats
-                const today = new Date().toDateString();
-                const todayLogs = (data || []).filter((l: AuditLog) => new Date(l.created_at).toDateString() === today);
-                const uniqueActors = new Set((data || []).map((l: AuditLog) => l.actor));
-                setStats({
-                    total: (data || []).length,
-                    today: todayLogs.length,
-                    actors: uniqueActors.size,
-                });
+                setOrgId(org.id);
+                await refreshLogs(org.id);
             }
         } catch (err) {
             console.error("Failed to load audit logs", err);
@@ -50,20 +53,67 @@ export default function AuditAndStatistics() {
         }
     };
 
+    const refreshLogs = useCallback(async (id: string) => {
+        try {
+            const data = await API.getAuditLogs(id);
+            setLogs(data || []);
+
+            // Compute stats
+            const today = new Date().toDateString();
+            const todayLogs = (data || []).filter((l: AuditLog) => new Date(l.created_at).toDateString() === today);
+            const uniqueActors = new Set((data || []).map((l: AuditLog) => l.actor));
+            setStats({
+                total: (data || []).length,
+                today: todayLogs.length,
+                actors: uniqueActors.size,
+            });
+            setLastSynced(new Date());
+        } catch (err) {
+            console.error("Failed to refresh audit logs", err);
+        }
+    }, []);
+
+    const handleSync = async () => {
+        if (!orgId || isSyncing) return;
+        setIsSyncing(true);
+        await refreshLogs(orgId);
+        setIsSyncing(false);
+    };
+
     const getActionColor = (action: string) => {
         const a = action.toLowerCase();
-        if (a.includes('delete') || a.includes('remove')) return 'text-red-600 bg-red-50';
-        if (a.includes('create') || a.includes('add') || a.includes('invite')) return 'text-green-600 bg-green-50';
-        if (a.includes('update') || a.includes('edit')) return 'text-blue-600 bg-blue-50';
+        if (a.includes('delete') || a.includes('remove') || a.includes('violation')) return 'text-red-600 bg-red-50';
+        if (a.includes('create') || a.includes('add') || a.includes('invite') || a.includes('submit')) return 'text-green-600 bg-green-50';
+        if (a.includes('update') || a.includes('edit') || a.includes('send')) return 'text-blue-600 bg-blue-50';
         if (a.includes('login') || a.includes('auth')) return 'text-purple-600 bg-purple-50';
+        if (a.includes('lockdown') || a.includes('flag') || a.includes('cheat')) return 'text-orange-600 bg-orange-50';
         return 'text-gray-600 bg-gray-50';
     };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">Audit & Statistics</h2>
-                <p className="text-gray-500">Monitor system interactions and evaluate overall candidate performance.</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Audit & Statistics</h2>
+                    <p className="text-gray-500">Monitor system interactions and evaluate overall candidate performance.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    {lastSynced && (
+                        <span className="text-xs text-gray-400">
+                            Last synced: {lastSynced.toLocaleTimeString()}
+                        </span>
+                    )}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSync}
+                        disabled={isSyncing || isLoading}
+                        className="gap-2 border-gray-200 hover:border-[#FF7300] hover:text-[#FF7300]"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                        {isSyncing ? 'Syncing...' : 'Sync'}
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -115,6 +165,7 @@ export default function AuditAndStatistics() {
                     <CardTitle className="text-base flex items-center gap-2">
                         <Shield className="w-4 h-4 text-gray-500" />
                         Audit Trail
+                        <span className="ml-auto text-xs font-normal text-gray-400">Auto-refreshes every 30s</span>
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
