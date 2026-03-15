@@ -10,13 +10,17 @@ export type InvitationStatus = 'pending' | 'completed' | 'expired';
  */
 export interface Invitation {
   id?: string;
-  candidateName: string;
-  candidateEmail: string;
+  candidateName?: string;
+  candidate_name?: string;
+  candidateEmail?: string;
+  candidate_email?: string;
   jobId: string;
   jobTitle?: string;
+  job_title?: string;
   organizationId: string;
   status: InvitationStatus;
   createdAt?: string;
+  created_at?: string;
 }
 
 /** Payload for creating an invitation (no id, status set by backend). */

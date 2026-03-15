@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '@/lib/api';
-// import type { Invitation } from '@/types';
+import type { Invitation } from '@/types';
 
 export interface InvitationHistoryItem {
   id: string;
@@ -36,9 +36,9 @@ export function useInvitations({ userId }: UseInvitationsOptions): UseInvitation
     if (!userId) return;
     try {
       const data = await API.getInvitations(userId);
-      const formatted: InvitationHistoryItem[] = (data ?? []).map((record: any) => ({
+      const formatted: InvitationHistoryItem[] = (data ?? []).map((record: Invitation) => ({
         id: record.id ?? '',
-        email: record.candidateEmail ?? record.candidate_email ?? record.email ?? '',
+        email: record.candidate_email ?? record.candidateEmail ?? (record as any).email ?? '',
         role: record.job_title ?? record.jobTitle ?? record.jobId ?? 'Unknown Role',
         time: record.created_at ? new Date(record.created_at).toLocaleDateString() : 'Just now',
         status: record.status ?? 'pending',
