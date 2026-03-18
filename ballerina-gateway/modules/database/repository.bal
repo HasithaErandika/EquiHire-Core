@@ -1062,5 +1062,44 @@ public client class Repository {
         map<json> job = <map<json>>results[0];
         return job["organization_id"].toString();
     }
+    # Saves structured CV parsing results into the cv_parsed_sections table.
+    #
+    # + candidateId - Candidate UUID
+    # + jobId - Job ID associated with the application
+    # + rawText - The redacted raw text extracted from the PDF
+    # + education - JSON structure for education
+    # + workExperience - JSON structure for work experience
+    # + projects - JSON structure for projects
+    # + technicalSkills - JSON array of skills
+    # + return - Error if failed
+    remote function insertCvParsedSections(
+        string candidateId, 
+        string jobId, 
+        string rawText, 
+        json education, 
+        json workExperience, 
+        json projects, 
+        json technicalSkills
+    ) returns error? {
+        
+        json queryPayload = {
+            "candidate_id": candidateId,
+            "job_id": jobId,
+            "raw_text": rawText,
+            "education": education,
+            "work_experience": workExperience,
+            "projects": projects,
+            "technical_skills": technicalSkills,
+            "parser_version": "v2.0"
+        };
 
+        // Note: Using your existing self.httpClient and self.headers
+        http:Response response = check self.httpClient->post("/rest/v1/cv_parsed_sections", queryPayload, headers = self.headers);
+
+        if response.statusCode >= 300 {
+            json errorBody = check response.getJsonPayload();
+            return error("Supabase Error saving CV sections: " + errorBody.toString());
+        }
+        return;
+    }
 }

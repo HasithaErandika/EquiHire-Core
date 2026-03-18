@@ -4,13 +4,9 @@ import ballerina/io;
 import ballerina/mime;
 import ballerina/time;
 import ballerina/uuid;
-import ballerinax/aws.s3;
-
 import equihire/gateway.database;
 import equihire/gateway.email as emailUtils;
 import equihire/gateway.ai as ai;
-
-// Imports from modules
 import equihire/gateway.types;
 
 // --- Configuration ---
@@ -42,16 +38,8 @@ final email:SmtpClient smtpClient = check new (
     security = email:START_TLS_AUTO
 );
 
-// Initialization of S3 Client for Cloudflare R2
-// Note: R2 is S3 compatible. We point the endpoint to Cloudflare.
-final s3:Client r2Client = check new (
-    {
-        accessKeyId: r2.accessKeyId,
-        secretAccessKey: r2.secretAccessKey,
-        region: r2.region,
-        "endpoint": "https://" + r2.accountId + ".r2.cloudflarestorage.com"
-    }
-);
+
+final http:Client r2HttpClient = check new ("https://" + r2.accountId + ".r2.cloudflarestorage.com");
 
 final database:Repository dbClient = check new (supabase);
 
@@ -238,11 +226,14 @@ service /api on apiListener {
 
     // --- Secure Candidate Upload (Vault & View) ---
 
-    // Single Endpoint for CV Upload & Trigger AI Parsing
-    resource function post candidates/upload\-cv(http:Request request) returns json|http:InternalServerError|http:BadRequest|error {
-        io:println("CV Upload request received.");
+    
 
-        // Extract Multipart Body
+ 
+
+    resource function post candidates/upload\-cv(http:Request request) returns json|http:InternalServerError|http:BadRequest|error {
+        io:println("CV Upload request received (Bypassing Cloudflare).");
+
+        // Extract Multipart Body 
         var bodyParts = check request.getBodyParts();
         
         byte[]? fileBytes = ();
@@ -258,57 +249,75 @@ service /api on apiListener {
             }
         }
 
+
         if fileBytes is () || jobId is () {
             return <http:BadRequest>{
-                body: {"error": "Missing 'file' or 'jobId' in form data"}
+                body: {"error": "Missing 'file' or 'jobId'"}
             };
         }
 
         string candidateId = uuid:createType1AsString();
-        string objectKey = "candidates/" + candidateId + "/resume.pdf";
+        io:println("Processing Candidate: ", candidateId);
 
-        // 1. Upload the raw PDF to Cloudflare R2
-        error? r2UploadErr = r2Client->createObject(r2.bucketName, objectKey, fileBytes);
+        // Pass bytes directly to Apache PDFBox 
 
-        if r2UploadErr is error {
-            io:println("Failed to upload to R2: ", r2UploadErr.message());
-            return http:INTERNAL_SERVER_ERROR;
-        }
-
-        // 2. Secure Layer: Save Identity Link (Identity -> R2 Key)
-        error? dbResult = dbClient->createSecureIdentity(candidateId, objectKey, jobId);
-
-        if dbResult is error {
-            io:println("DB Error: ", dbResult.message());
-            return http:INTERNAL_SERVER_ERROR;
-        }
-
-        // 3. Trigger Native AI Pipeline (Synchronous Parse, Asynchronous Supabase Insertion)
-        // Extract text via PDFBox Java Interop directly from the byte array in memory
         string|error rawText = ai:extractTextFromPdf(fileBytes);
+        
         if rawText is error {
-             io:println("PDF Extraction Failed: ", rawText.message());
-             return http:INTERNAL_SERVER_ERROR;
+             io:println("PDFBox Extraction Failed: ", rawText.message());
+             return <http:InternalServerError>{ body: {"error": "Could not read PDF content"}};
         }
+        io:println("PDF text extracted successfully.");
+
+        // Pass extracted text to Google Gemini
 
         json|error cvJson = ai:parseCvWithGemini(rawText);
+        
         if cvJson is error {
              io:println("Gemini Parsing Failed: ", cvJson.message());
-             return http:INTERNAL_SERVER_ERROR;
+             return <http:InternalServerError>{ body: {"error": "AI could not parse the CV"}};
+        }
+        io:println("Gemini analysis complete.");
+
+        // Mask PII in the raw text using the piiMap from Gemini
+        string redactedText = rawText;
+        map<json> cvMap = <map<json>>cvJson;
+        var piiMapVal = cvMap["piiMap"];
+        if piiMapVal is map<json> {
+            redactedText = ai:maskPii(rawText, piiMapVal);
+            io:println("PII Masking complete. Redacted preview: ", redactedText.substring(0, 200));
+        } else {
+            io:println("No PII map found in Gemini response, skipping masking.");
         }
 
-        // Parse successful - fire asynchronous DB injection worker
-        var savePipeline = function(json parsedData, string cId) {
-             io:println("Extracted CV Data: Saving to DB for candidate ", cId);
-             
-             error? saveErr = dbClient->saveCvParseResult(cId, parsedData);
-             if saveErr is error {
-                 io:println("Failed to save parsed CV data: ", saveErr.message());
-             } else {
-                 io:println("Successfully saved parsed CV data for candidate ", cId);
-             }
-        };
-        _ = start savePipeline(cvJson, candidateId);
+        // Save results to Supabase
+    var saveToDatabase = function(json parsedData, string cId, string jId, string redacted) returns error? { 
+
+        map<json> dataMap = <map<json>>parsedData;
+        map<json> sections = <map<json>>dataMap["sections"];
+
+
+       json education = sections.get("education");
+       json workExperience = sections.get("work_experience");
+       json projects = sections.get("projects");
+       json technicalSkills = dataMap.get("detectedStack"); 
+
+
+        check dbClient->insertCvParsedSections(
+           cId, 
+           jId, 
+           redacted, 
+           education, 
+           workExperience, 
+           projects, 
+           technicalSkills
+        );
+
+        io:println("Successfully saved Candidate data to public.cv_parsed_sections");
+        return;
+    };
+        _ = start saveToDatabase(cvJson, candidateId, jobId, redactedText);
+
 
         return {"status": "success", "candidateId": candidateId};
     }
@@ -730,4 +739,3 @@ service /api on apiListener {
         return {"status": "flagged", "candidateId": candidateId};
     }
 }
-
