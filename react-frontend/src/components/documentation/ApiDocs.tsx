@@ -21,7 +21,7 @@ export default function ApiDocs() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
               <div className="flex items-center space-x-2 cursor-pointer" onClick={() => window.location.href = '/'}>
-                  <EquiHireLogo className="w-8 h-8" />
+                  <EquiHireLogo className="h-10 w-auto md:h-12" />
                   <span className="font-bold text-xl tracking-tight">EquiHire Docs</span>
               </div>
 
@@ -115,7 +115,7 @@ export default function ApiDocs() {
       <footer className="w-full border-t border-border/40 bg-muted/10 py-10 mt-12 backdrop-blur-md">
         <div className="container mx-auto px-4 flex flex-col items-center justify-center text-center space-y-4">
           <div className="flex items-center space-x-2 text-muted-foreground">
-            <EquiHireLogo className="w-5 h-5 opacity-50" />
+            <EquiHireLogo className="h-8 w-auto opacity-75" />
             <span className="font-semibold tracking-tight">EquiHire Docs</span>
           </div>
           <p className="text-sm text-muted-foreground max-w-md">

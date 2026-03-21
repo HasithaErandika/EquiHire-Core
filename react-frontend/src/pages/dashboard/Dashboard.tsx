@@ -76,7 +76,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1D] font-sans flex text-sm">
       <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col fixed inset-y-0 left-0 z-10">
         <div className="h-16 flex items-center px-6 border-b border-gray-100">
-          <EquiHireLogo className="mr-3 w-8 h-8" />
+          <EquiHireLogo className="mr-3 h-8 w-auto" />
           <span className="font-semibold text-lg tracking-tight">EquiHire</span>
         </div>
         <nav className="flex-1 p-4 space-y-1">

@@ -69,7 +69,7 @@ export default function InviteHandler() {
                 {/* Logo */}
                 <div className="flex items-center justify-center mb-8">
                     <div className="w-16 h-16 bg-gradient-to-br from-[#FF7300] to-[#E56700] rounded-2xl shadow-lg flex items-center justify-center">
-                        <EquiHireLogo className="w-10 h-10 text-white" />
+                        <EquiHireLogo className="h-10 w-auto text-white" />
                     </div>
                 </div>
 

@@ -36,7 +36,7 @@ export default function LandingPageComponent() {
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                        <EquiHireLogo className="w-8 h-8" />
+                        <EquiHireLogo className="h-10 w-auto md:h-12" />
                         <span className="font-bold text-xl tracking-tight">EquiHire</span>
                     </div>
 
@@ -355,7 +355,7 @@ export default function LandingPageComponent() {
                     </div>
                     <div className="space-y-4 hidden md:block col-span-2">
                         <div className="flex items-center space-x-3 mb-4">
-                            <EquiHireLogo className="w-8 h-8 text-primary drop-shadow-[0_0_8px_var(--theme-primary)]" />
+                            <EquiHireLogo className="h-8 w-auto opacity-90 drop-shadow-[0_0_8px_var(--theme-primary)]" />
                             <span className="font-bold text-xl text-foreground tracking-tight">EquiHire</span>
                         </div>
                         <p className="max-w-sm text-muted-foreground/80 leading-relaxed text-base">

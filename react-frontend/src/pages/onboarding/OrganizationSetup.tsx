@@ -57,7 +57,7 @@ export default function OrganizationSetup({ onComplete }: OrganizationSetupProps
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-sans">
             <div className="mb-8 text-center">
                 <div className="flex items-center justify-center mb-4">
-                    <EquiHireLogo className="w-12 h-12" />
+                    <EquiHireLogo className="h-12 w-auto" />
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900">Welcome to EquiHire</h1>
                 <p className="text-gray-500 mt-2">Let's set up your organization's workspace.</p>

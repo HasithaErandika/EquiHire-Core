@@ -26,7 +26,7 @@ export function LoadingScreen({ message = 'Loading...', className, fullScreen = 
         }}
         className="mb-8"
       >
-          <EquiHireLogo className="w-32 h-32" />
+          <EquiHireLogo className="h-20 w-auto" />
       </motion.div>
       <motion.div
           initial={{ width: 0 }}

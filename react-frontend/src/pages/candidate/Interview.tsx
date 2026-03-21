@@ -303,7 +303,7 @@ export default function CandidateInterview() {
             <header className="h-16 flex items-center justify-between px-6 lg:px-12 bg-white border-b border-gray-200 z-50">
                 <div className="flex items-center gap-3">
                     <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm">
-                        <EquiHireLogo className="w-6 h-6 text-white" />
+                        <EquiHireLogo className="h-6 w-auto text-white" />
                     </div>
                     <span className="font-bold text-xl tracking-tight text-gray-900">EquiHire</span>
                     <div className="h-4 w-px bg-gray-200 mx-2" />
