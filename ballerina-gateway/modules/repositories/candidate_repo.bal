@@ -274,7 +274,7 @@ public function getCandidates(string organizationId) returns types:CandidateResp
     map<string> invMap = check fetchInvitationNameMap(organizationId);
     map<map<json>> ctxMap = check fetchContextMap(jobIdsFilter);
     map<map<json>> cvMap = check fetchCvParsedMap(jobIdsFilter);
-    map<int> cheatMap = check fetchCheatMap(jobIdsFilter);
+    map<record {| int count; string[] types; |}> cheatMap = check fetchCheatMap(jobIdsFilter);
 
     return assembleCandidateList(profiles, jobTitleMap, evalMap, invMap, ctxMap, cvMap, cheatMap);
 }
@@ -373,18 +373,31 @@ function fetchCvParsedMap(string jobIdsFilter) returns map<map<json>>|error {
     return cvMap;
 }
 
-function fetchCheatMap(string jobIdsFilter) returns map<int>|error {
+function fetchCheatMap(string jobIdsFilter) returns map<record {| int count; string[] types; |}>|error {
     // We fetch candidate_id from cheat_events. Ideally we'd join on exam_sessions,
     // but for now we'll fetch all cheat events and filter in-memory or assume the set is small enough.
-    string path = "/rest/v1/cheat_events?select=candidate_id";
+    string path = "/rest/v1/cheat_events?select=candidate_id,event_type";
     http:Response r = check clients:supabaseHttpClient->get(
         path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
-    map<int> cheatMap = {};
+    map<record {| int count; string[] types; |}> cheatMap = {};
     if r.statusCode < 300 {
         json[] events = <json[]>check r.getJsonPayload();
         foreach json e in events {
             string cId = (<map<json>>e)["candidate_id"].toString();
-            cheatMap[cId] = (cheatMap[cId] ?: 0) + 1;
+            string eventType = (<map<json>>e)["event_type"].toString();
+            record {| int count; string[] types; |} entry = cheatMap.hasKey(cId) ? cheatMap.get(cId) : {count: 0, types: []};
+            entry.count += 1;
+            boolean hasType = false;
+            foreach string t in entry.types {
+                if t == eventType {
+                    hasType = true;
+                    break;
+                }
+            }
+            if !hasType {
+                entry.types.push(eventType);
+            }
+            cheatMap[cId] = entry;
         }
     }
     return cheatMap;
@@ -393,7 +406,7 @@ function fetchCheatMap(string jobIdsFilter) returns map<int>|error {
 function assembleCandidateList(json[] profiles, map<string> jobTitleMap,
                                map<map<json>> evalMap, map<string> invMap,
                                map<map<json>> ctxMap, map<map<json>> cvMap,
-                               map<int> cheatMap) returns types:CandidateResponse[] {
+                               map<record {| int count; string[] types; |}> cheatMap) returns types:CandidateResponse[] {
     types:CandidateResponse[] results = [];
     foreach json p in profiles {
         map<json> pm = <map<json>>p;
@@ -463,7 +476,8 @@ function assembleCandidateList(json[] profiles, map<string> jobTitleMap,
             experienceLevel: expLevel,
             detectedStack: stack,
             hfRelevanceSkipped: hfSkipped,
-            cheatEventCount: cheatMap.hasKey(cId) ? cheatMap.get(cId) : 0,
+            cheatEventCount: cheatMap.hasKey(cId) ? cheatMap.get(cId).count : 0,
+            cheatEventTypes: cheatMap.hasKey(cId) ? cheatMap.get(cId).types : [],
             cvText: rawText,
             education: edu,
             workExperience: work,

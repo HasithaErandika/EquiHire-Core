@@ -4,7 +4,7 @@
  */
 
 /** Pipeline status for a candidate in the hiring process */
-export type CandidateStatus = 'pending' | 'accepted' | 'rejected' | 'scheduled';
+export type CandidateStatus = 'pending' | 'accepted' | 'rejected' | 'scheduled' | 'screening' | 'shortlisted' | 'applied';
 
 /**
  * Extended candidate shape returned by the dashboard candidates API.
@@ -35,6 +35,7 @@ export interface ExtendedCandidate {
   projects?: any;
   summaryFeedback?: string;
   cheatEventCount?: number;
+  cheatEventTypes?: string[];
 }
 
 /** Filter for activity: all, only seen, or only unseen */

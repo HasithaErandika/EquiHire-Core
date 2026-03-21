@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Shield, Clock, Users, AlertCircle, RefreshCw } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import CandidateViolations from './CandidateViolations';
 
 export default function AuditAndStatistics() {
   const { state } = useAuthContext();
@@ -80,6 +82,24 @@ export default function AuditAndStatistics() {
         ))}
       </div>
 
+      <Tabs defaultValue="audit" className="space-y-6">
+        <TabsList className="bg-white/50 border border-gray-200/60 p-1 w-full sm:w-auto h-auto grid grid-cols-2 rounded-xl">
+          <TabsTrigger 
+            value="audit"
+            className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm py-2 px-4 transition-all"
+          >
+            System Audit Logs
+          </TabsTrigger>
+          <TabsTrigger 
+            value="violations"
+            className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm py-2 px-4 transition-all"
+          >
+            Candidate Violations
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="audit" className="space-y-8 focus-visible:outline-none focus-visible:ring-0">
+
       <Card className="shadow-sm border-gray-200">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -148,6 +168,12 @@ export default function AuditAndStatistics() {
           )}
         </CardContent>
       </Card>
+      </TabsContent>
+
+      <TabsContent value="violations" className="focus-visible:outline-none focus-visible:ring-0">
+        <CandidateViolations />
+      </TabsContent>
+    </Tabs>
     </div>
   );
 }

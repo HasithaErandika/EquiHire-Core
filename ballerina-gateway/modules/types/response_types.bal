@@ -97,6 +97,7 @@ public type CandidateResponse record {|
     string[] detectedStack = [];
     int hfRelevanceSkipped = 0;
     int cheatEventCount = 0;
+    string[] cheatEventTypes = [];
     string? cvText = ();
     json? education = ();
     json? workExperience = ();

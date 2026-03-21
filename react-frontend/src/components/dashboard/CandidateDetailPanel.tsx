@@ -166,61 +166,61 @@ export function CandidateDetailPanel({
               </h4>
               <div className="bg-white border border-gray-200 p-3 rounded-lg shadow-sm space-y-4">
                 {candidate.education && (
-                   <div>
-                     <span className="text-xs font-semibold text-gray-700 block mb-1">Education</span>
-                     <div className="text-xs text-gray-600 pl-2 border-l-2 border-gray-100 space-y-1">
-                       {Array.isArray(candidate.education) ? (
-                         candidate.education.map((edu, i) => (
-                           <div key={i} className="mb-2">
-                             <p className="font-bold">{typeof edu === 'string' ? edu : edu.degree || edu.institution}</p>
-                             {typeof edu === 'object' && <p className="text-[10px] text-gray-500">{edu.field || edu.major} • {edu.duration || edu.year}</p>}
-                           </div>
-                         ))
-                       ) : typeof candidate.education === 'string' ? (
-                         <p>{candidate.education}</p>
-                       ) : (
-                         <pre className="whitespace-pre-wrap font-sans">{JSON.stringify(candidate.education, null, 2)}</pre>
-                       )}
-                     </div>
-                   </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-700 block mb-1">Education</span>
+                    <div className="text-xs text-gray-600 pl-2 border-l-2 border-gray-100 space-y-1">
+                      {Array.isArray(candidate.education) ? (
+                        candidate.education.map((edu, i) => (
+                          <div key={i} className="mb-2">
+                            <p className="font-bold">{typeof edu === 'string' ? edu : edu.degree || edu.institution}</p>
+                            {typeof edu === 'object' && <p className="text-[10px] text-gray-500">{edu.field || edu.major} • {edu.duration || edu.year}</p>}
+                          </div>
+                        ))
+                      ) : typeof candidate.education === 'string' ? (
+                        <p>{candidate.education}</p>
+                      ) : (
+                        <pre className="whitespace-pre-wrap font-sans">{JSON.stringify(candidate.education, null, 2)}</pre>
+                      )}
+                    </div>
+                  </div>
                 )}
                 {candidate.workExperience && (
-                   <div>
-                     <span className="text-xs font-semibold text-gray-700 block mb-1">Work Experience</span>
-                     <div className="text-xs text-gray-600 pl-2 border-l-2 border-gray-100 space-y-2">
-                       {Array.isArray(candidate.workExperience) ? (
-                         candidate.workExperience.map((job, i) => (
-                           <div key={i} className="mb-2">
-                             <p className="font-bold">{typeof job === 'string' ? job : job.title || job.position}</p>
-                             {typeof job === 'object' && <p className="text-[10px] text-gray-500">{job.company || job.organization} • {job.duration || job.period}</p>}
-                           </div>
-                         ))
-                       ) : typeof candidate.workExperience === 'string' ? (
-                         <p>{candidate.workExperience}</p>
-                       ) : (
-                         <pre className="whitespace-pre-wrap font-sans">{JSON.stringify(candidate.workExperience, null, 2)}</pre>
-                       )}
-                     </div>
-                   </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-700 block mb-1">Work Experience</span>
+                    <div className="text-xs text-gray-600 pl-2 border-l-2 border-gray-100 space-y-2">
+                      {Array.isArray(candidate.workExperience) ? (
+                        candidate.workExperience.map((job, i) => (
+                          <div key={i} className="mb-2">
+                            <p className="font-bold">{typeof job === 'string' ? job : job.title || job.position}</p>
+                            {typeof job === 'object' && <p className="text-[10px] text-gray-500">{job.company || job.organization} • {job.duration || job.period}</p>}
+                          </div>
+                        ))
+                      ) : typeof candidate.workExperience === 'string' ? (
+                        <p>{candidate.workExperience}</p>
+                      ) : (
+                        <pre className="whitespace-pre-wrap font-sans">{JSON.stringify(candidate.workExperience, null, 2)}</pre>
+                      )}
+                    </div>
+                  </div>
                 )}
                 {candidate.projects && (
-                   <div>
-                     <span className="text-xs font-semibold text-gray-700 block mb-1">Projects</span>
-                     <div className="text-xs text-gray-600 pl-2 border-l-2 border-gray-100 space-y-1">
-                       {Array.isArray(candidate.projects) ? (
-                         candidate.projects.map((proj, i) => (
-                           <div key={i} className="mb-2">
-                             <p className="font-bold">{typeof proj === 'string' ? proj : proj.name || proj.title}</p>
-                             {typeof proj === 'object' && <p className="text-[10px] text-gray-500">{proj.description}</p>}
-                           </div>
-                         ))
-                       ) : typeof candidate.projects === 'string' ? (
-                         <p>{candidate.projects}</p>
-                       ) : (
-                         <pre className="whitespace-pre-wrap font-sans">{JSON.stringify(candidate.projects, null, 2)}</pre>
-                       )}
-                     </div>
-                   </div>
+                  <div>
+                    <span className="text-xs font-semibold text-gray-700 block mb-1">Projects</span>
+                    <div className="text-xs text-gray-600 pl-2 border-l-2 border-gray-100 space-y-1">
+                      {Array.isArray(candidate.projects) ? (
+                        candidate.projects.map((proj, i) => (
+                          <div key={i} className="mb-2">
+                            <p className="font-bold">{typeof proj === 'string' ? proj : proj.name || proj.title}</p>
+                            {typeof proj === 'object' && <p className="text-[10px] text-gray-500">{proj.description}</p>}
+                          </div>
+                        ))
+                      ) : typeof candidate.projects === 'string' ? (
+                        <p>{candidate.projects}</p>
+                      ) : (
+                        <pre className="whitespace-pre-wrap font-sans">{JSON.stringify(candidate.projects, null, 2)}</pre>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </section>
@@ -275,24 +275,24 @@ export function CandidateDetailPanel({
               </div>
               <div className="relative">
                 <div
-                  className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-white ring-2 ring-gray-50 ${candidate.status !== 'pending' && candidate.status !== 'scheduled' ? (candidate.status === 'accepted' ? 'bg-green-500' : 'bg-red-500') : 'bg-gray-200'}`}
+                  className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-white ring-2 ring-gray-50 ${!['pending', 'applied', 'scheduled', 'screening'].includes(candidate.status) ? (candidate.status === 'accepted' ? 'bg-green-500' : 'bg-red-500') : 'bg-gray-200'}`}
                 />
                 <div className="flex flex-col">
-                   <p className="text-sm font-black text-gray-900 leading-none">Final Decision</p>
-                   <div className="mt-1">
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider 
-                        ${candidate.status === 'accepted' ? 'bg-green-50 text-green-600' : 
-                          candidate.status === 'rejected' ? 'bg-red-50 text-red-600' : 
+                  <p className="text-sm font-black text-gray-900 leading-none">Final Decision</p>
+                  <div className="mt-1">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider 
+                        ${candidate.status === 'accepted' ? 'bg-green-50 text-green-600' :
+                        candidate.status === 'rejected' ? 'bg-red-50 text-red-600' :
                           'bg-gray-50 text-gray-500'}`}>
-                        {candidate.status === 'pending'
-                          ? 'Review Pending'
-                          : candidate.status === 'accepted'
-                            ? 'Accepted'
-                            : candidate.status === 'rejected'
-                              ? 'Rejected'
-                              : 'Pending'}
-                      </span>
-                   </div>
+                      {candidate.status === 'pending' || candidate.status === 'applied'
+                        ? 'Review Pending'
+                        : candidate.status === 'accepted'
+                          ? 'Accepted'
+                          : candidate.status === 'rejected'
+                            ? 'Rejected'
+                            : 'Pending'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -300,7 +300,7 @@ export function CandidateDetailPanel({
 
           {/* Actions */}
           <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-            {candidate.status === 'pending' && onEvaluateCV && (
+            {(candidate.status === 'pending' || candidate.status === 'applied') && onEvaluateCV && (
               <Button
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => onEvaluateCV(candidate.candidateId)}
@@ -314,8 +314,8 @@ export function CandidateDetailPanel({
                 Evaluate AI Match
               </Button>
             )}
-            
-            {candidate.status === 'pending' && candidate.score > 0 && (
+
+            {(candidate.status === 'pending' || candidate.status === 'applied') && candidate.score > 0 && (
               <Button
                 className={`w-full ${meetsThreshold ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}`}
                 onClick={() => onApplyDecision(candidate.candidateId)}

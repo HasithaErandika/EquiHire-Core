@@ -103,6 +103,7 @@ export default function CandidateManager() {
           <div className="flex-1 overflow-hidden">
             <CandidatePipeline 
                 candidates={filteredCandidates}
+                threshold={threshold}
                 selectedId={selectedCandidate?.candidateId ?? null}
                 onSelectCandidate={handleViewDetails}
             />

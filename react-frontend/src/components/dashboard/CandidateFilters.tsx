@@ -15,11 +15,12 @@ export interface CandidateFiltersProps {
 }
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string; dot: string }[] = [
-  { value: 'all',       label: 'All Status', dot: 'bg-gray-400' },
-  { value: 'pending',   label: 'Pending',    dot: 'bg-blue-400' },
-  { value: 'accepted',  label: 'Accepted',   dot: 'bg-green-400' },
-  { value: 'rejected',  label: 'Rejected',   dot: 'bg-red-400' },
-  { value: 'scheduled', label: 'Scheduled',  dot: 'bg-yellow-400' },
+  { value: 'all',         label: 'All Status',  dot: 'bg-gray-400' },
+  { value: 'applied',     label: 'Applied',     dot: 'bg-blue-300' },
+  { value: 'pending',     label: 'Pending',     dot: 'bg-blue-400' },
+  { value: 'shortlisted', label: 'Shortlisted', dot: 'bg-teal-400' },
+  { value: 'accepted',    label: 'Accepted',    dot: 'bg-green-400' },
+  { value: 'rejected',    label: 'Rejected',    dot: 'bg-red-400' },
 ];
 
 export function CandidateFilters({
