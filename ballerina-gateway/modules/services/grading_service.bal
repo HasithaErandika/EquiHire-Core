@@ -178,12 +178,12 @@ function summarizeViolations(types:CheatEventItem[] events) returns string {
 function buildGradingResult(string sessionId, string candidateId, string questionId,
                              string redactedAns, types:QuestionItem q, string expLevel,
                              boolean hfPassed, float? hfScore, string violationsSummary) returns types:GradingResult {
-    return callGeminiGrader(sessionId, candidateId, questionId, redactedAns, q, expLevel, hfScore, violationsSummary);
+    return callGeminiGrader(sessionId, candidateId, questionId, redactedAns, q, expLevel, hfPassed, hfScore, violationsSummary);
 }
 
 function callGeminiGrader(string sessionId, string candidateId, string questionId,
                            string redactedAns, types:QuestionItem q, string expLevel,
-                           float? hfScore, string violationsSummary) returns types:GradingResult {
+                           boolean hfPassed, float? hfScore, string violationsSummary) returns types:GradingResult {
     string prompt = utils:buildGradingPrompt(
         redactedAns, q.questionText, q.sampleAnswer, expLevel, "Moderate", violationsSummary);
     string url = string `/models/${constants:GEMINI_MODEL}:generateContent?key=${config:geminiApiKey}`;
@@ -213,7 +213,7 @@ function callGeminiGrader(string sessionId, string candidateId, string questionI
     return {
         sessionId: sessionId, candidateId: candidateId, questionId: questionId,
         redactedAnswer: finalRedacted, score: finalScore, feedback: finalFeedback,
-        hfGatePassed: true, hfRelevanceScore: hfScore,
+        hfGatePassed: hfPassed, hfRelevanceScore: hfScore,
         geminiModel: constants:GEMINI_MODEL, gradingAttempt: attempts, wasFlagged: flagged
     };
 }

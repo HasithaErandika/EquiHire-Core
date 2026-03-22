@@ -12,6 +12,17 @@ export interface AuditStats {
   actors: number;
 }
 
+export interface ActivityPoint {
+  date: string;
+  count: number;
+}
+
+export interface ActionDistribution {
+  action: string;
+  count: number;
+  fill: string; // Color code for pie chart
+}
+
 export interface UseAuditOptions {
   userId: string | undefined;
   /** Auto-refresh interval in ms; 0 to disable. Default 30000. */
@@ -21,7 +32,10 @@ export interface UseAuditOptions {
 export interface UseAuditResult {
   logs: AuditLog[];
   stats: AuditStats;
+  activityTimeSeries: ActivityPoint[];
+  actionDistribution: ActionDistribution[];
   lastSynced: Date | null;
+
   isLoading: boolean;
   isSyncing: boolean;
   refresh: () => Promise<void>;
@@ -38,6 +52,8 @@ export function useAudit({
 }: UseAuditOptions): UseAuditResult {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [stats, setStats] = useState<AuditStats>({ total: 0, today: 0, actors: 0 });
+  const [activityTimeSeries, setActivityTimeSeries] = useState<ActivityPoint[]>([]);
+  const [actionDistribution, setActionDistribution] = useState<ActionDistribution[]>([]);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +68,9 @@ export function useAudit({
       const todayLogs = list.filter((l: AuditLog) => new Date(l.created_at).toDateString() === today);
       const uniqueActors = new Set(list.map((l: AuditLog) => l.actor));
       setStats({ total: list.length, today: todayLogs.length, actors: uniqueActors.size });
+
+      computeChartData(list);
+      
       setLastSynced(new Date());
     } catch (err) {
       console.error('Failed to refresh audit logs', err);
@@ -104,9 +123,56 @@ export function useAudit({
     return 'text-gray-600 bg-gray-50';
   }, []);
 
+  const getActionHexColor = (action: string) => {
+    const colorClass = getActionColor(action);
+    if (colorClass.includes('red-600')) return '#DC2626';     // tailwind red-600
+    if (colorClass.includes('green-600')) return '#16A34A';   // tailwind green-600
+    if (colorClass.includes('blue-600')) return '#2563EB';    // tailwind blue-600
+    if (colorClass.includes('purple-600')) return '#9333EA';  // tailwind purple-600
+    if (colorClass.includes('orange-600')) return '#EA580C';  // tailwind orange-600
+    return '#4B5563'; // tailwind gray-600
+  };
+
+  const computeChartData = useCallback((auditLogs: AuditLog[]) => {
+    // 1. Time Series: last 7 days including today
+    const seriesMap = new Map<string, number>();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      seriesMap.set(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), 0);
+    }
+
+    // 2. Action Distribution
+    const distMap = new Map<string, number>();
+
+    auditLogs.forEach(log => {
+      // time series logic
+      const logDate = new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (seriesMap.has(logDate)) {
+        seriesMap.set(logDate, seriesMap.get(logDate)! + 1);
+      }
+
+      // distribution logic
+      const actionKey = log.action;
+      distMap.set(actionKey, (distMap.get(actionKey) || 0) + 1);
+    });
+
+    const timeSeriesData = Array.from(seriesMap.entries()).map(([date, count]) => ({ date, count }));
+    
+    // Convert to sorted array for pie chart and map colors
+    const distData = Array.from(distMap.entries())
+      .map(([action, count]) => ({ action, count, fill: getActionHexColor(action) }))
+      .sort((a, b) => b.count - a.count); // Largest slices first
+
+    setActivityTimeSeries(timeSeriesData);
+    setActionDistribution(distData);
+  }, [getActionColor]);
+
   return {
     logs,
     stats,
+    activityTimeSeries,
+    actionDistribution,
     lastSynced,
     isLoading,
     isSyncing,

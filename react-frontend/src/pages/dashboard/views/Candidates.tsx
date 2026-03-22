@@ -48,7 +48,6 @@ export default function CandidateManager() {
     handleViewDetails,
     handleAcceptCandidate,
     handleRejectCandidate,
-    handleEvaluateCV,
   } = useCandidates({ userId });
 
   const [viewMode, setViewMode] = useState<'table' | 'pipeline'>('table');
@@ -145,7 +144,6 @@ export default function CandidateManager() {
           isProcessing={isProcessing}
           onClose={() => setSelectedCandidate(null)}
           onApplyDecision={handleApplyDecision}
-          onEvaluateCV={handleEvaluateCV}
         />
       )}
     </div>

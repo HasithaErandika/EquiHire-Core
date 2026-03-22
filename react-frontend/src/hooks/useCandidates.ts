@@ -48,8 +48,6 @@ export interface UseCandidatesResult {
   handleRejectCandidate: (candidateId: string) => Promise<void>;
   /** Apply accept/reject decision and refresh list */
   handleApplyDecision: (candidateId: string) => Promise<void>;
-  /** Trigger manual AI evaluation of candidate CV against Marking Criteria */
-  handleEvaluateCV: (candidateId: string) => Promise<void>;
   /** Refetch candidates (e.g. after decision) */
   refreshCandidates: () => Promise<void>;
 }
@@ -108,6 +106,9 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
   }, [userId, loadData]);
 
   const mappedCandidates = candidates.map((c) => {
+    // Never recalculate status for finalized decisions — they are authoritative.
+    if (c.status === 'accepted' || c.status === 'rejected') return c;
+
     if (cvWeight + skillsWeight + interviewWeight === 100) {
       const cvP = typeof c.cvScore === 'number' ? c.cvScore : 0;
       const skillsP = typeof c.skillsScore === 'number' ? c.skillsScore : 0;
@@ -117,20 +118,28 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         const weightedScore = Math.round(
           (cvP * cvWeight + skillsP * skillsWeight + intP * interviewWeight) / 100
         );
-        // Correct the pass marking based on the dynamic auto-pass threshold overrides
-        const newStatus = (weightedScore >= threshold ? 'shortlisted' : 'rejected') as ExtendedCandidate['status'];
+        const newStatus = (weightedScore >= threshold ? 'shortlisted' : 'pending') as ExtendedCandidate['status'];
         return { ...c, score: weightedScore, status: newStatus };
       }
     }
     return c;
   });
 
-  const filteredCandidates = mappedCandidates.filter((c) => {
+  // Sort: newest application first. Use createdAt or appliedDate as tie-breaker.
+  const sortedCandidates = [...mappedCandidates].sort((a, b) => {
+    const dateA = new Date(a.createdAt ?? a.appliedDate ?? 0).getTime();
+    const dateB = new Date(b.createdAt ?? b.appliedDate ?? 0).getTime();
+    return dateB - dateA;
+  });
+
+  const filteredCandidates = sortedCandidates.filter((c) => {
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+    // 'new' activity = applied status, not yet opened in this session
     const matchesActivity =
       activityFilter === 'all' || (activityFilter === 'seen' ? c.seen : !c.seen);
     return matchesStatus && matchesActivity;
   });
+
 
   const activeSelectedCandidate = selectedCandidate 
     ? filteredCandidates.find(c => c.candidateId === selectedCandidate.candidateId) || selectedCandidate
@@ -214,27 +223,6 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
     [threshold, orgId, fetchCandidates]
   );
 
-  const handleEvaluateCV = useCallback(
-    async (candidateId: string) => {
-      setIsProcessing(true);
-      try {
-        await API.evaluateCandidateCV(candidateId);
-        await fetchCandidates(orgId);
-        
-        // Update the selected candidate state if it's currently open
-        if (selectedCandidate?.candidateId === candidateId) {
-            const updatedCandidates = await API.getCandidates(orgId) as unknown as ExtendedCandidate[];
-            const updated = updatedCandidates.find(c => c.candidateId === candidateId);
-            if (updated) setSelectedCandidate(updated);
-        }
-      } catch (error) {
-        console.error('Evaluate CV failed:', error);
-      } finally {
-        setIsProcessing(false);
-      }
-    },
-    [orgId, fetchCandidates, selectedCandidate]
-  );
 
   return {
     candidates,
@@ -260,7 +248,6 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
     handleAcceptCandidate,
     handleRejectCandidate,
     handleApplyDecision,
-    handleEvaluateCV,
     refreshCandidates,
   };
 }

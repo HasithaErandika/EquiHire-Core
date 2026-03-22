@@ -109,16 +109,28 @@ export function useJobs({ userId }: UseJobsOptions): UseJobsResult {
 
   const updateJob = useCallback(
     async (jobId: string, payload: { title: string; description: string; requiredSkills: string[]; evaluationTemplateId?: string }) => {
-      await API.updateJob(jobId, payload);
-      await refreshJobs();
+      try {
+        await API.updateJob(jobId, payload);
+        await refreshJobs();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to update job.';
+        console.error('updateJob failed:', message);
+        throw err;
+      }
     },
     [refreshJobs]
   );
 
   const deleteJob = useCallback(
     async (jobId: string) => {
-      await API.deleteJob(jobId);
-      await refreshJobs();
+      try {
+        await API.deleteJob(jobId);
+        await refreshJobs();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to delete job.';
+        console.error('deleteJob failed:', message);
+        throw err;
+      }
     },
     [refreshJobs]
   );

@@ -3,14 +3,6 @@
 // Only outbound API payload shapes live here.
 // ===========================================================================
 
-// Standard API response wrapper — use this for EVERY endpoint response.
-public type ApiResponse record {|
-    boolean success;
-    string message;
-    json? data = ();
-    string? 'error = ();
-|};
-
 // Organization details.
 public type OrganizationResponse record {|
     string id;
@@ -53,13 +45,6 @@ public type UploadCvResponse record {|
     json parsed;
 |};
 
-// Pre-signed R2 URL response (for direct client-side uploads).
-public type UploadUrlResponse record {|
-    string uploadUrl;
-    string candidateId;
-    string objectKey;
-|};
-
 // Identity reveal response.
 public type RevealResponse record {|
     string? url;
@@ -70,14 +55,6 @@ public type RevealResponse record {|
 public type StartSessionResponse record {|
     string sessionId;
     string status;
-|};
-
-// Direct Gemini evaluation response (for /evaluate endpoint).
-public type EvaluationResponse record {|
-    string redactedAnswer;
-    decimal score;
-    string feedback;
-    boolean piiDetected;
 |};
 
 // Recruiter dashboard candidate record.
@@ -104,10 +81,15 @@ public type CandidateResponse record {|
     json? projects = ();
 |};
 
-// Pass/fail decision response.
+// Pass/fail decision response — matches the actual /candidates/{id}/decide response.
 public type DecisionResponse record {|
     string candidateId;
     boolean pass;
     boolean emailSent;
+    string status;
+    decimal overallScore;
+    decimal cvScore;
+    decimal skillsScore;
+    decimal interviewScore;
     string message;
 |};

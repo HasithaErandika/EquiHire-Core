@@ -6,6 +6,7 @@ import ballerina/log;
 import ballerina/uuid;
 import equihire/gateway.clients;
 import equihire/gateway.config;
+import equihire/gateway.constants;
 import equihire/gateway.repositories;
 import equihire/gateway.types;
 import equihire/gateway.utils;
@@ -54,7 +55,7 @@ function storeInR2(byte[] pdfBytes, string candidateId) returns string|error {
 
 function parseWithGemini(string rawText, string candidateId, string jobId) returns json|error {
     string prompt = utils:buildCvParsePrompt(rawText);
-    string url    = string `/models/gemini-flash-latest:generateContent?key=${config:geminiApiKey}`;
+    string url    = string `/models/${constants:GEMINI_MODEL}:generateContent?key=${config:geminiApiKey}`;
     http:Response res = check clients:geminiClient->post(url, {"contents": [{"parts": [{"text": prompt}]}]});
     if res.statusCode < 200 || res.statusCode >= 300 {
         log:printError("Gemini CV parse failed", statusCode = res.statusCode, candidateId = candidateId);

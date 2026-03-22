@@ -8,8 +8,10 @@ import { useAudit } from '@/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, Shield, Clock, Users, AlertCircle, RefreshCw } from 'lucide-react';
+import { Activity, Shield, Clock, Users, AlertCircle, RefreshCw, BarChart2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Area, AreaChart, CartesianGrid, XAxis, PieChart, Pie, Cell } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import CandidateViolations from './CandidateViolations';
 
 export default function AuditAndStatistics() {
@@ -18,6 +20,8 @@ export default function AuditAndStatistics() {
   const {
     logs,
     stats,
+    activityTimeSeries,
+    actionDistribution,
     lastSynced,
     isLoading,
     isSyncing,
@@ -80,6 +84,78 @@ export default function AuditAndStatistics() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        {/* Activity Over Time Chart */}
+        <Card className="shadow-sm border-gray-200/60 w-full overflow-hidden">
+          <CardHeader className="pb-2 bg-gray-50/50">
+            <CardTitle className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-primary" />
+              Activity Over Time (7 Days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 px-1">
+            {isLoading ? (
+               <Skeleton className="h-[240px] w-full mx-4" />
+            ) : activityTimeSeries.length === 0 ? (
+               <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">No activity recorded</div>
+            ) : (
+               <ChartContainer config={{ count: { label: "Events", color: "#10B981" } }} className="h-[240px] w-full pr-6">
+                 <AreaChart data={activityTimeSeries} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                   <defs>
+                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                       <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
+                       <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                     </linearGradient>
+                   </defs>
+                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                   <XAxis dataKey="date" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                   <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                   <Area type="monotone" dataKey="count" stroke="#10B981" fillOpacity={1} fill="url(#colorCount)" strokeWidth={2} />
+                 </AreaChart>
+               </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Action Distribution Chart */}
+        <Card className="shadow-sm border-gray-200/60 w-full overflow-hidden">
+          <CardHeader className="pb-2 bg-gray-50/50">
+            <CardTitle className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-blue-500" />
+              Action Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 flex justify-center w-full">
+            {isLoading ? (
+               <Skeleton className="h-[240px] w-full mx-4" />
+            ) : actionDistribution.length === 0 ? (
+               <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">No distribution data</div>
+            ) : (
+               <ChartContainer config={{}} className="h-[240px] w-full [&_.recharts-pie-label-text]:fill-gray-600">
+                 <PieChart>
+                   <Pie
+                     data={actionDistribution}
+                     cx="50%"
+                     cy="50%"
+                     innerRadius={65}
+                     outerRadius={95}
+                     paddingAngle={3}
+                     dataKey="count"
+                     nameKey="action"
+                     stroke="none"
+                   >
+                     {actionDistribution.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={entry.fill} />
+                     ))}
+                   </Pie>
+                   <ChartTooltip content={<ChartTooltipContent nameKey="action" />} />
+                 </PieChart>
+               </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="audit" className="space-y-6">

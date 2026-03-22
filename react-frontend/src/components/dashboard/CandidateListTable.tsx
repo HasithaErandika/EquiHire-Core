@@ -156,7 +156,8 @@ export function CandidateListTable({
                             {c.candidateName}
                           </span>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            {!c.seen && (
+                            {/* 'New' badge — only for freshly applied, unviewed candidates */}
+                            {!c.seen && c.status === 'applied' && (
                               <span className="text-[9px] font-extrabold uppercase tracking-wider text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full ring-1 ring-blue-200">
                                 New
                               </span>

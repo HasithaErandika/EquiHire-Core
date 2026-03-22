@@ -48,14 +48,14 @@ This document describes all REST API endpoints exposed by the **EquiHire-Core** 
 
 | Action                              | Method | Endpoint                                           | Description                                      | Path / Query Params          | Request Body Example (main fields)                          |
 |-------------------------------------|--------|----------------------------------------------------|--------------------------------------------------|------------------------------|-------------------------------------------------------------|
-| Get presigned upload URL            | GET    | `/candidates/upload-url`                           | Obtain temporary S3-compatible upload URL        | —                            | —                                                           |
-| Complete resume upload & trigger AI | POST   | `/candidates/complete-upload`                      | Finalize upload & start parsing                  | —                            | `candidateId`, `objectKey`, `jobId`                         |
-| Reveal candidate identity           | GET    | `/candidates/{candidateId}/reveal`                 | Unmask anonymized candidate                      | `candidateId`                | —                                                           |
-| Parse CV (Gemini extraction)        | POST   | `/candidates/parse-cv`                             | Explicitly trigger AI CV parsing                 | —                            | `candidate_id`, `r2_object_key`, `job_id`                   |
-| Evaluate candidate answer           | POST   | `/evaluate`                                        | Score answer relevance & quality                 | —                            | `candidateAnswer`, `question`, `modelAnswer`                |
-| Generate rejection email            | POST   | `/candidates/generate-rejection-email`             | Create polite rejection message                  | —                            | `candidate_name`, `job_title`, `summary_feedback`           |
+| Complete resume upload & trigger AI | POST   | `/candidates/upload-cv`                            | Uploads multipart CV file and starts parsing     | —                            | `file` and `jobId` multipart elements                       |
+| Start Candidate Session             | POST   | `/candidates/{candidateId}/start-session`          | Starts tracking a new exam session               | `candidateId`                | `jobId`, `invitationId` (optional)                          |
+| Evaluate candidate answer           | POST   | `/candidates/{candidateId}/evaluate`               | Score answer relevance & quality                 | `candidateId`                | `candidateAnswer`, `question`, `modelAnswer`                |
+| Reveal candidate identity           | GET    | `/candidates/{candidateId}/reveal`                 | Unmask anonymized candidate (admin/recruiter)    | `candidateId`                | —                                                           |
+| Re-Evaluate candidate CV            | POST   | `/candidates/{candidateId}/evaluate-cv`            | Explicitly trigger AI CV parsing on existing CV  | `candidateId`                | —                                                           |
+| Flag Cheating                       | POST   | `/candidates/{candidateId}/flag-cheating`          | Register a security violation/cheating flag      | `candidateId`                | `violation_details`, `severity`                             |
 | List candidates for organization    | GET    | `/organizations/{organizationId}/candidates`       | View all candidates in org                       | `organizationId`             | —                                                           |
-| Submit final decision               | POST   | `/candidates/{candidateId}/decide`                 | Record hire / no-hire / on-hold decision         | `candidateId`                | `threshold`, `decision`, `notes` (optional)                 |
+| Submit final decision               | POST   | `/candidates/{candidateId}/decide`                 | Record hire/reject decision & trigger email      | `candidateId`                | `threshold`, `notes` (optional)                             |
 
 ### 6. Evaluation Templates & Audit Logs
 
@@ -475,41 +475,24 @@ For consistent and efficient testing across your team, import the ready-to-use *
 			"name": "5. Candidates",
 			"item": [
 				{
-					"name": "Get Presigned Upload URL",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/upload-url",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"upload-url"
-							]
-						}
-					}
-				},
-				{
-					"name": "Complete Upload",
+					"name": "Upload CV",
 					"request": {
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "multipart/form-data"
 							}
 						],
 						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"candidateId\": \"cand_999\",\n  \"objectKey\": \"candidates/cand_999/resume.pdf\",\n  \"jobId\": \"job_111\"\n}"
+							"mode": "formdata",
+							"formdata": [
+								{ "key": "file", "type": "file" },
+								{ "key": "jobId", "value": "job_111", "type": "text" }
+							]
 						},
 						"url": {
-							"raw": "http://localhost:9092/api/candidates/complete-upload",
+							"raw": "http://localhost:9092/api/candidates/upload-cv",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -518,28 +501,7 @@ For consistent and efficient testing across your team, import the ready-to-use *
 							"path": [
 								"api",
 								"candidates",
-								"complete-upload"
-							]
-						}
-					}
-				},
-				{
-					"name": "Reveal Candidate Identity",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/cand_999/reveal",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"cand_999",
-								"reveal"
+								"upload-cv"
 							]
 						}
 					}
@@ -605,6 +567,78 @@ For consistent and efficient testing across your team, import the ready-to-use *
 					}
 				},
 				{
+					"name": "Reveal Candidate Identity",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:9092/api/candidates/cand_999/reveal",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9092",
+							"path": [
+								"api",
+								"candidates",
+								"cand_999",
+								"reveal"
+							]
+						}
+					}
+				},
+				{
+					"name": "Re-Evaluate CV",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:9092/api/candidates/cand_999/evaluate-cv",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9092",
+							"path": [
+								"api",
+								"candidates",
+								"cand_999",
+								"evaluate-cv"
+							]
+						}
+					}
+				},
+				{
+					"name": "Flag Cheating",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"violation_details\": \"Detected unauthorized browser window navigation.\",\n  \"severity\": \"high\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:9092/api/candidates/cand_999/flag-cheating",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9092",
+							"path": [
+								"api",
+								"candidates",
+								"cand_999",
+								"flag-cheating"
+							]
+						}
+					}
+				},
+				{
 					"name": "Submit Decision",
 					"request": {
 						"method": "POST",
@@ -616,7 +650,7 @@ For consistent and efficient testing across your team, import the ready-to-use *
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"threshold\": 70.0\n}"
+							"raw": "{\n  \"threshold\": 70.0,\n  \"notes\": \"Strong candidate, good fundamentals\"\n}"
 						},
 						"url": {
 							"raw": "http://localhost:9092/api/candidates/cand_999/decide",

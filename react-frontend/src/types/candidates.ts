@@ -19,6 +19,9 @@ export interface ExtendedCandidate {
   /** Whether the recruiter has viewed this candidate (affects "unseen" filter) */
   seen: boolean;
   appliedDate: string;
+  /** ISO timestamp of when the anonymous profile was created */
+  createdAt?: string;
+
   /** Number of answers flagged as irrelevant/gibberish (HF relevance check) */
   hfRelevanceSkipped: number;
   experienceLevel?: string;

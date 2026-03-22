@@ -13,6 +13,7 @@ import {
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { API } from '@/lib/api';
 import type { ExtendedCandidate } from '@/types';
 
 export interface CandidateDetailPanelProps {
@@ -21,7 +22,6 @@ export interface CandidateDetailPanelProps {
   isProcessing: boolean;
   onClose: () => void;
   onApplyDecision: (candidateId: string, decision: 'accepted' | 'rejected') => Promise<void>;
-  onEvaluateCV?: (candidateId: string) => Promise<void>;
 }
 
 const AVATAR_URL = 'https://api.dicebear.com/7.x/avataaars/svg';
@@ -32,7 +32,6 @@ export function CandidateDetailPanel({
   isProcessing,
   onClose,
   onApplyDecision,
-  onEvaluateCV,
 }: CandidateDetailPanelProps) {
   const [showTranscript, setShowTranscript] = useState(false);
   const isDecisionMade = ['accepted', 'rejected'].includes(candidate.status);
@@ -304,22 +303,7 @@ export function CandidateDetailPanel({
 
           {/* Actions */}
           <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-            {(candidate.status === 'pending' || candidate.status === 'applied') && onEvaluateCV && (
-              <Button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => onEvaluateCV(candidate.candidateId)}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" aria-hidden />
-                ) : (
-                  <FileText className="w-4 h-4 mr-2" aria-hidden />
-                )}
-                Evaluate AI Match
-              </Button>
-            )}
-
-            {(candidate.status === 'pending' || candidate.status === 'applied') && candidate.score > 0 && (
+            {(candidate.status === 'pending' || candidate.status === 'applied' || candidate.status === 'shortlisted') && (
               <div className="flex gap-2">
                 <Button
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
@@ -351,14 +335,30 @@ export function CandidateDetailPanel({
             )}
 
             {canViewTranscript && (
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={() => setShowTranscript(!showTranscript)}
-              >
-                <FileText className="w-4 h-4 mr-2" aria-hidden />
-                {showTranscript ? 'Hide' : 'View'} Full Transcript
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90 text-white"
+                  onClick={async () => {
+                    try {
+                      const res = await API.revealCandidate(candidate.candidateId);
+                      if (res.url) window.open(res.url, '_blank');
+                    } catch (err) {
+                      console.error('Failed to reveal CV:', err);
+                    }
+                  }}
+                >
+                  <FileText className="w-4 h-4 mr-2" aria-hidden />
+                  View Original CV (PII)
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => setShowTranscript(!showTranscript)}
+                >
+                  <FileText className="w-4 h-4 mr-2" aria-hidden />
+                  {showTranscript ? 'Hide' : 'View'} Full Transcript
+                </Button>
+              </div>
             )}
 
             {isDecisionMade && !canViewTranscript && (

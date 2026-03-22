@@ -3,7 +3,6 @@
 // evaluation templates, and candidate answers.
 // ===========================================================================
 import ballerina/http;
-import ballerina/log;
 import equihire/gateway.clients;
 import equihire/gateway.types;
 
@@ -246,16 +245,6 @@ public function deleteEvaluationTemplate(string id, string organizationId) retur
     if response.statusCode >= 300 { return error("deleteEvaluationTemplate failed"); }
 }
 
-// ---------------------------------------------------------------------------
-// Candidate Answers
-// ---------------------------------------------------------------------------
+// saveCandidateAnswer removed — was dead code targeting the legacy `candidate_answers` table.
+// Candidate answers are stored via insertRawAnswer() into raw_answer_vault.
 
-public function saveCandidateAnswer(string candidateId, string questionId, string answerText) returns error? {
-    json payload = {"candidate_id": candidateId, "question_id": questionId, "answer_text": answerText};
-    http:Response response = check clients:supabaseHttpClient->post(
-        "/rest/v1/candidate_answers", payload, headers = clients:getSupabaseServiceHeaders());
-    if response.statusCode >= 300 {
-        log:printError("saveCandidateAnswer failed", candidateId = candidateId, questionId = questionId);
-        return error("saveCandidateAnswer failed");
-    }
-}

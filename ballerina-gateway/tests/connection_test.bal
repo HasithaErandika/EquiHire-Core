@@ -37,6 +37,30 @@ function testHuggingFaceConnection() returns error? {
 }
 
 @test:Config {}
+function testHuggingFaceRelevanceTest() returns error? {
+    log:printInfo("Testing HuggingFace Zero-Shot Relevance Evaluation...");
+    huggingface:ZeroShotClassificationRequest hfPayload = {
+        inputs: "I have 5 years of experience in Java and Spring Boot.",
+        parameters: {candidateLabels: ["relevant", "irrelevant"]}
+    };
+    huggingface:ZeroShotClassificationResponse|error res = 
+        clients:hfClient->/hf\-inference/models/[constants:HF_ZERO_SHOT_MODEL]/zero\-shot\-classification.post(hfPayload);
+    
+    if res is huggingface:ZeroShotClassificationResponse {
+        test:assertTrue(res.length() > 0, "HF response should contain labels");
+        boolean hasRelevant = false;
+        foreach var item in res {
+            if item.label == "relevant" {
+                hasRelevant = true;
+                float score = <float>(item.score ?: 0.0);
+                test:assertTrue(score > 0.5, "Relevance score for a valid engineering answer should be high");
+            }
+        }
+        test:assertTrue(hasRelevant, "Response must contain 'relevant' label");
+    }
+}
+
+@test:Config {}
 function testGeminiConnection() returns error? {
     log:printInfo("Testing Gemini API Connection...");
     json payload = {"contents": [{"parts": [{"text": "Hello"}]}]};

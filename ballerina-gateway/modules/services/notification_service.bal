@@ -24,8 +24,8 @@ public function sendInvitationEmail(string toEmail, string candidateName,
 }
 
 public function sendAcceptanceEmail(string toEmail, string candidateName,
-                                    string jobTitle) returns error? {
-    string htmlBody = buildAcceptanceHtml(candidateName, jobTitle);
+                                    string jobTitle, string bodyContent) returns error? {
+    string htmlBody = buildAcceptanceHtml(candidateName, jobTitle, bodyContent);
     check smtpClient->sendMessage({
         to: toEmail, subject: "Congratulations! Next Steps for " + jobTitle,
         htmlBody: htmlBody, 'from: config:smtpFromEmail
@@ -70,7 +70,7 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;col
 </div></body></html>`;
 }
 
-function buildAcceptanceHtml(string candidateName, string jobTitle) returns string {
+function buildAcceptanceHtml(string candidateName, string jobTitle, string bodyContent) returns string {
     return string `<!DOCTYPE html><html><head><style>
 body{font-family:'Segoe UI',Tahoma,sans-serif;line-height:1.6;color:#333}
 .container{max-width:600px;margin:0 auto;padding:20px}
@@ -80,7 +80,7 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;line-height:1.6;color:#333}
 <div class="header"><h1 style="margin:0;font-size:28px">Congratulations! 🎉</h1></div>
 <div class="content"><h2 style="color:#10B981;margin-top:0">Hello ${candidateName},</h2>
 <p>We are thrilled to inform you that you have <strong>passed</strong> the technical evaluation for <strong>${jobTitle}</strong>.</p>
-<p>Our recruitment team will be in touch shortly with the next steps.</p>
+<div style="margin-top: 20px; margin-bottom: 20px;">${bodyContent}</div>
 <p>Welcome to the next chapter!</p></div></div></body></html>`;
 }
 
