@@ -11,9 +11,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { API } from '@/lib/api';
 import type { ExtendedCandidate } from '@/types';
+import { TranscriptModal } from './TranscriptModal';
 
 export interface CandidateDetailPanelProps {
   candidate: ExtendedCandidate;
@@ -34,6 +36,7 @@ export function CandidateDetailPanel({
 }: CandidateDetailPanelProps) {
   const isDecisionMade = ['accepted', 'rejected'].includes(candidate.status);
   const canViewTranscript = candidate.status === 'accepted';
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
 
   return (
     <div className="w-[400px] flex flex-col space-y-4 animate-in slide-in-from-right-10 duration-300">
@@ -351,7 +354,7 @@ export function CandidateDetailPanel({
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => window.open(`/transcript?candidateId=${candidate.candidateId}`, '_blank')}
+                  onClick={() => setIsTranscriptOpen(true)}
                 >
                   <FileText className="w-4 h-4 mr-2" aria-hidden />
                   View Full Transcript
@@ -370,6 +373,12 @@ export function CandidateDetailPanel({
           </div>
         </CardContent>
       </Card>
+      
+      <TranscriptModal 
+        candidateId={candidate.candidateId} 
+        isOpen={isTranscriptOpen} 
+        onClose={() => setIsTranscriptOpen(false)} 
+      />
     </div>
   );
 }

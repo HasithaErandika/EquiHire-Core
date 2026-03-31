@@ -94,17 +94,29 @@ function saveCvAsync(json parsedData, string candidateId, string jobId, string r
     string expLevel  = d.hasKey("experienceLevel") ? d["experienceLevel"].toString() : "junior";
     float estimatedYears = d.hasKey("estimatedYears") && d["estimatedYears"] is float ? <float>d["estimatedYears"] : 0.0;
 
-    // 1. Create the base profile and identity
+    // 1. Create the base profile and identity FIRST (Foreign Key dependency)
     check repositories:createSecureIdentity(candidateId, r2Key, jobId);
 
-    // 2. Save the PII map (used for grading later)
-    check repositories:insertPiiEntityMap(candidateId, piiEntities, piiMap);
+    // 2. Parallelize the remaining independent inserts using workers
+    worker wPii returns error? {
+        check repositories:insertPiiEntityMap(candidateId, piiEntities, piiMap);
+    }
+    worker wCtx returns error? {
+        check repositories:insertContextTags(candidateId, jobId, expLevel, tech, estimatedYears);
+    }
+    worker wSec returns error? {
+        check repositories:insertCvParsedSections(candidateId, jobId, redacted, edu, work, proj, achvs, certs, tech);
+    }
 
-    // 3. Save Context Tags (experience level and detected skills)
-    check repositories:insertContextTags(candidateId, jobId, expLevel, tech, estimatedYears);
-    
-    // 4. Save parsed sections
-    check repositories:insertCvParsedSections(candidateId, jobId, redacted, edu, work, proj, achvs, certs, tech);
+    // Wait for all parallel inserts to complete
+    error? errPii = wait wPii;
+    error? errCtx = wait wCtx;
+    error? errSec = wait wSec;
+
+    if errPii is error { log:printError("PII map insert failed", 'error = errPii, candidateId = candidateId); }
+    if errCtx is error { log:printError("Context tags insert failed", 'error = errCtx, candidateId = candidateId); }
+    if errSec is error { log:printError("Parsed sections insert failed", 'error = errSec, candidateId = candidateId); }
+
     _ = start evaluateCandidateCv(candidateId);
     log:printInfo("CV and profile saved to Supabase", candidateId = candidateId, jobId = jobId);
 }

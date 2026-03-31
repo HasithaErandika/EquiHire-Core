@@ -143,7 +143,7 @@ public function createJobQuestion(string jobId, string questionText, string samp
 }
 
 public function getJobQuestions(string jobId) returns types:QuestionItem[]|error {
-    string path = string `/rest/v1/questions?job_id=eq.${jobId}&select=*&order=created_at.asc`;
+    string path = string `/rest/v1/questions?job_id=eq.${jobId}&select=id,job_id,question_text,sample_answer,keywords,type&order=created_at.asc`;
     http:Response response = check clients:supabaseHttpClient->get(
         path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getJobQuestions failed"); }

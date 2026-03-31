@@ -57,6 +57,7 @@ export default function CandidateInterview() {
 
     // Initialize session and questions
     const isInitializing = useRef(false);
+    const endTimeRef = useRef<number | null>(null);
 
     useEffect(() => {
         const initializeInterview = async () => {
@@ -129,14 +130,30 @@ export default function CandidateInterview() {
             }
         };
 
+        const handleContextMenu = (e: MouseEvent) => {
+            e.preventDefault();
+            // Don't spam warnings on right click, just prevent it
+        };
+
+        const handleCopyPaste = (e: ClipboardEvent) => {
+            e.preventDefault();
+            addCheatEvent('tab_switch', "Copy and paste operations are blocked.", "tabswitch");
+        };
+
         document.addEventListener('visibilitychange', handleVisibilityChange);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         window.addEventListener('blur', handleBlur);
+        document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('copy', handleCopyPaste);
+        document.addEventListener('paste', handleCopyPaste);
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
             window.removeEventListener('blur', handleBlur);
+            document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('copy', handleCopyPaste);
+            document.removeEventListener('paste', handleCopyPaste);
         };
     }, [loading, error, isSubmitted, addCheatEvent]);
 
@@ -192,19 +209,23 @@ export default function CandidateInterview() {
     useEffect(() => {
         if (loading || error || isSubmitted || questions.length === 0) return;
         
+        if (!endTimeRef.current) {
+            endTimeRef.current = Date.now() + timeLeft * 1000;
+        }
+
         const currentQId = questions[currentQuestionIndex]?.id;
 
         const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) { 
-                    clearInterval(timer); 
-                    submitPayload(true); 
-                    return 0; 
-                }
-                return prev - 1;
-            });
+            const now = Date.now();
+            const remaining = Math.max(0, Math.floor((endTimeRef.current! - now) / 1000));
+            setTimeLeft(remaining);
 
-            if (currentQId) {
+            if (remaining <= 0) { 
+                clearInterval(timer); 
+                submitPayload(true); 
+            }
+
+            if (currentQId && remaining > 0) {
                 timeSpentPerQuestion.current[currentQId] = (timeSpentPerQuestion.current[currentQId] || 0) + 1;
             }
 

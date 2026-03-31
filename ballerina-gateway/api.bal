@@ -42,14 +42,14 @@ service / on apiListener {
 
         error? validErr = utils:requireUploadParts(fileBytes, jobId);
         if validErr is error {
-            return <http:BadRequest>{body: {"error": validErr.message()}};
+            return utils:createBadRequest(validErr.message());
         }
 
         types:UploadCvResponse|error result = services:uploadAndParseCV(
                 <byte[]>fileBytes, <string>jobId);
         if result is error {
             log:printError("CV upload failed", 'error = result);
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -68,7 +68,7 @@ service / on apiListener {
                 candidateId, invitationId, jobId);
         if result is error {
             log:printError("startSession failed", 'error = result, candidateId = candidateId);
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -81,7 +81,7 @@ service / on apiListener {
         if parsed is error {
             log:printError("Invalid assessment payload",
                     'error = parsed, candidateId = candidateId);
-            return <http:InternalServerError>{body: {"error": "Invalid payload: " + parsed.message()}};
+            return utils:createInternalError("Invalid payload: " + parsed.message());
         }
 
         log:printInfo("Assessment submitted", candidateId = candidateId,
@@ -91,7 +91,7 @@ service / on apiListener {
         if result is error {
             log:printError("submitAssessment failed",
                     'error = result, candidateId = candidateId);
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -103,7 +103,7 @@ service / on apiListener {
         if result is error {
             log:printError("revealCandidate failed",
                     'error = result, candidateId = candidateId);
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -114,7 +114,7 @@ service / on apiListener {
         string|error orgId = repositories:createOrganization(
                 payload.name, payload.industry, payload.size);
         if orgId is error {
-            return <http:InternalServerError>{body: {"error": orgId.message()}};
+            return utils:createInternalError(orgId.message());
         }
         error? recErr = repositories:createRecruiter(
                 payload.userId, payload.userEmail, <string>orgId);
@@ -128,7 +128,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         types:OrganizationResponse|error org = repositories:getOrganizationByUser(userId);
         if org is error {
-            return <http:InternalServerError>{body: {"error": org.message()}};
+            return utils:createInternalError(org.message());
         }
         return org;
     }
@@ -139,7 +139,7 @@ service / on apiListener {
         error? err = repositories:updateOrganization(
                 d["organizationId"].toString(), d["industry"].toString(), d["size"].toString());
         if err is error {
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "updated"};
     }
@@ -150,11 +150,11 @@ service / on apiListener {
         // jobs.recruiter_id is a FK to recruiters.id (internal UUID), not user_id
         string|error recId = repositories:getRecruiterId(userId);
         if recId is error {
-            return <http:InternalServerError>{body: {"error": "Recruiter not found: " + recId.message()}};
+            return utils:createInternalError("Recruiter not found: " + recId.message());
         }
         json[]|error jobs = repositories:getJobsByRecruiter(<string>recId);
         if jobs is error {
-            return <http:InternalServerError>{body: {"error": jobs.message()}};
+            return utils:createInternalError(jobs.message());
         }
         return jobs;
     }
@@ -164,14 +164,14 @@ service / on apiListener {
         // Resolve internal recruiter UUID (recruiterId from frontend is the Asgardeo userId)
         string|error recId = repositories:getRecruiterId(payload.recruiterId);
         if recId is error {
-            return <http:InternalServerError>{body: {"error": "Recruiter not found: " + recId.message()}};
+            return utils:createInternalError("Recruiter not found: " + recId.message());
         }
         string|error id = repositories:createJob(
                 payload.title, payload.description, payload.requiredSkills,
                 payload.organizationId, <string>recId,
                 payload.evaluationTemplateId);
         if id is error {
-            return <http:InternalServerError>{body: {"error": id.message()}};
+            return utils:createInternalError(id.message());
         }
         return {"id": id};
     }
@@ -181,7 +181,7 @@ service / on apiListener {
         error? err = repositories:updateJob(
                 jobId, payload.title, payload.description, payload.requiredSkills, payload.evaluationTemplateId);
         if err is error {
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "updated"};
     }
@@ -190,7 +190,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         error? err = repositories:deleteJob(jobId);
         if err is error {
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "deleted"};
     }
@@ -202,7 +202,7 @@ service / on apiListener {
             error? err = repositories:createJobQuestion(
                     q.jobId, q.questionText, q.sampleAnswer, q.keywords, q.'type);
             if err is error {
-                return <http:InternalServerError>{body: {"error": err.message()}};
+                return utils:createInternalError(err.message());
             }
         }
         return {"status": "created", "count": payload.questions.length()};
@@ -212,7 +212,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         types:QuestionItem[]|error qs = repositories:getJobQuestions(jobId);
         if qs is error {
-            return <http:InternalServerError>{body: {"error": qs.message()}};
+            return utils:createInternalError(qs.message());
         }
         return <json>qs;
     }
@@ -224,7 +224,7 @@ service / on apiListener {
                 questionId, payload.questionText, payload.sampleAnswer,
                 payload.keywords, payload.'type);
         if err is error {
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "updated"};
     }
@@ -233,7 +233,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         error? err = repositories:deleteQuestion(questionId);
         if err is error {
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "deleted"};
     }
@@ -243,11 +243,11 @@ service / on apiListener {
             returns json|http:InternalServerError {
         string|error recId = repositories:getRecruiterId(userId);
         if recId is error {
-            return <http:InternalServerError>{body: {"error": "Recruiter not found: " + recId.message()}};
+            return utils:createInternalError("Recruiter not found: " + recId.message());
         }
         json[]|error result = repositories:getInvitationsByRecruiter(<string>recId);
         if result is error {
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -256,13 +256,13 @@ service / on apiListener {
             returns json|http:InternalServerError {
         string|error recId = repositories:getRecruiterId(payload.recruiterId);
         if recId is error {
-            return <http:InternalServerError>{body: {"error": recId.message()}};
+            return utils:createInternalError(recId.message());
         }
 
         types:InvitationResponse|error inv = services:createInvitation(
                 payload, <string>recId);
         if inv is error {
-            return <http:InternalServerError>{body: {"error": inv.message()}};
+            return utils:createInternalError(inv.message());
         }
 
         types:InvitationResponse invVal = <types:InvitationResponse>inv;
@@ -276,7 +276,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         types:TokenValidationResponse|error result = services:validateToken(token);
         if result is error {
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -287,7 +287,7 @@ service / on apiListener {
         types:CandidateResponse[]|error result = repositories:getCandidates(
                 organizationId);
         if result is error {
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -404,7 +404,7 @@ service / on apiListener {
         var transcriptResult = repositories:getCandidateTranscript(candidateId);
         if transcriptResult is error {
             log:printError("Failed to fetch transcript", 'error = transcriptResult, candidateId = candidateId);
-            return <http:InternalServerError>{body: {"error": "Failed to fetch candidate transcript"}};
+            return utils:createInternalError("Failed to fetch candidate transcript");
         }
 
         string|error nameResult = repositories:getCandidateDisplayName(candidateId);
@@ -422,7 +422,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         json|error result = services:evaluateCandidateCv(candidateId);
         if result is error {
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return {"status": "success"};
     }
@@ -432,7 +432,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         json[]|error result = repositories:getAuditLogs(organizationId);
         if result is error {
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -442,7 +442,7 @@ service / on apiListener {
             returns json|http:InternalServerError {
         json[]|error result = repositories:getEvaluationTemplates(organizationId);
         if result is error {
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -457,7 +457,7 @@ service / on apiListener {
                 d["name"].toString(), d["description"].toString(), templateType,
                 promptTemplate, d["organizationId"].toString());
         if result is error {
-            return <http:InternalServerError>{body: {"error": result.message()}};
+            return utils:createInternalError(result.message());
         }
         return result;
     }
@@ -471,7 +471,7 @@ service / on apiListener {
                 id, d["name"].toString(), d["description"].toString(), templateType,
                 promptTemplate, d["organizationId"].toString());
         if err is error {
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "updated"};
     }
@@ -482,7 +482,7 @@ service / on apiListener {
         error? err = repositories:deleteEvaluationTemplate(
                 id, d["organizationId"].toString());
         if err is error {
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "deleted"};
     }
@@ -500,7 +500,7 @@ service / on apiListener {
         if err is error {
             log:printError("createAuditLog failed for legacy flag",
                     'error = err, candidateId = candidateId);
-            return <http:InternalServerError>{body: {"error": err.message()}};
+            return utils:createInternalError(err.message());
         }
         return {"status": "flagged", "candidateId": candidateId};
     }
