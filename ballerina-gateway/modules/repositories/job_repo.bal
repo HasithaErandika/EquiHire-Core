@@ -37,7 +37,7 @@ public function createJob(string title, string description, string[] requiredSki
 public function getJobsByRecruiter(string recruiterId) returns json[]|error {
     string path = string `/rest/v1/jobs?recruiter_id=eq.${recruiterId}&select=id,title,description,required_skills,organization_id,evaluation_template_id,created_at`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getJobsByRecruiter failed"); }
     json[] rows = <json[]>check response.getJsonPayload();
     json[] result = [];
@@ -89,7 +89,7 @@ public function deleteJob(string jobId) returns error? {
 public function getOrgIdByJob(string jobId) returns string|error {
     string path = string `/rest/v1/jobs?select=organization_id&id=eq.${jobId}`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getOrgIdByJob failed"); }
     json[] rows = <json[]>check response.getJsonPayload();
     if rows.length() == 0 { return error("Job not found: " + jobId); }
@@ -99,7 +99,7 @@ public function getOrgIdByJob(string jobId) returns string|error {
 public function getEvaluationTemplateIdForJob(string jobId) returns string?|error {
     string path = string `/rest/v1/jobs?select=evaluation_template_id&id=eq.${jobId}`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getEvaluationTemplateIdForJob failed"); }
     json[] rows = <json[]>check response.getJsonPayload();
     if rows.length() == 0 { return error("Job not found: " + jobId); }
@@ -110,7 +110,7 @@ public function getEvaluationTemplateIdForJob(string jobId) returns string?|erro
 public function getJobRequiredSkills(string jobId) returns string[]|error {
     string path = string `/rest/v1/jobs?select=required_skills&id=eq.${jobId}`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getJobRequiredSkills failed"); }
     json[] rows = <json[]>check response.getJsonPayload();
     if rows.length() == 0 { return error("Job not found: " + jobId); }
@@ -145,7 +145,7 @@ public function createJobQuestion(string jobId, string questionText, string samp
 public function getJobQuestions(string jobId) returns types:QuestionItem[]|error {
     string path = string `/rest/v1/questions?job_id=eq.${jobId}&select=id,job_id,question_text,sample_answer,keywords,type&order=created_at.asc`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getJobQuestions failed"); }
 
     json[] results = <json[]>check response.getJsonPayload();
@@ -194,7 +194,7 @@ public function deleteQuestion(string questionId) returns error? {
 public function getEvaluationTemplates(string organizationId) returns json[]|error {
     string path = string `/rest/v1/evaluation_templates?or=(is_system_template.eq.true,organization_id.eq.${organizationId})&select=*&order=created_at.desc`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getEvaluationTemplates failed"); }
     return <json[]>check response.getJsonPayload();
 }
@@ -202,7 +202,7 @@ public function getEvaluationTemplates(string organizationId) returns json[]|err
 public function getEvaluationTemplatePrompt(string templateId) returns string|error {
     string path = string `/rest/v1/evaluation_templates?id=eq.${templateId}&select=prompt_template`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getEvaluationTemplatePrompt failed"); }
     json[] rows = <json[]>check response.getJsonPayload();
     if rows.length() == 0 { return error("Template not found: " + templateId); }

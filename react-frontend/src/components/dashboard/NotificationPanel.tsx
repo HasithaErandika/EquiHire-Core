@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { API } from '@/lib/api';
 import type { AuditLog } from '@/types';
+import { isNotificationWorthy } from '@/types/audit';
 
 export function NotificationPanel({ orgId }: { orgId: string }) {
   const [notifications, setNotifications] = useState<AuditLog[]>([]);
@@ -22,8 +23,9 @@ export function NotificationPanel({ orgId }: { orgId: string }) {
     const fetchLogs = async () => {
       try {
         const logs = await API.getAuditLogs(orgId);
-        // For simplicity, take top 10 recent actions as notifications
-        const recent = logs.slice(0, 10);
+        // Filter to only show special/notification-worthy logs requested by user
+        const worthyLogs = logs.filter(isNotificationWorthy);
+        const recent = worthyLogs.slice(0, 10);
         setNotifications(recent);
         // Only increment unread if there are new ones (dummy logic for visual demo)
         if (recent.length > 0) {

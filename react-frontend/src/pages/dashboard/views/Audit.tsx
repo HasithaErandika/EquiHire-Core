@@ -3,20 +3,30 @@
  * Uses useAudit for logs, stats, sync, and action badge styling.
  */
 
+import { useState } from 'react';
 import { useAuthContext } from '@asgardeo/auth-react';
 import { useAudit } from '@/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, Clock, Users, AlertCircle, RefreshCw, BarChart2, History, PieChart as PieChartIcon } from 'lucide-react';
+import { Activity, Clock, Users, AlertCircle, RefreshCw, BarChart2, History, PieChart as PieChartIcon, Search, FileText, Layers } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Area, AreaChart, CartesianGrid, XAxis, PieChart, Pie, Label } from 'recharts';
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import CandidateViolations from './CandidateViolations';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { deriveCategory } from '@/types/audit';
+import type { AuditLog } from '@/types/audit';
 
 export default function AuditAndStatistics() {
   const { state } = useAuthContext();
   const userId = state.sub;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [severityFilter, setSeverityFilter] = useState<string>('ALL');
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const {
     logs,
     stats,
@@ -45,6 +55,22 @@ export default function AuditAndStatistics() {
     };
     return acc;
   }, {} as ChartConfig);
+
+  const filteredLogs = logs.filter(log => {
+      const matchesSearch = searchTerm === '' || 
+        log.actor.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        log.target.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.action.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const category = log.action_category || deriveCategory(log.action);
+      const matchesCategory = categoryFilter === 'ALL' || category === categoryFilter;
+
+      const severity = log.severity || 'INFO';
+      const matchesSeverity = severityFilter === 'ALL' || severity === severityFilter;
+
+      return matchesSearch && matchesCategory && matchesSeverity;
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -232,12 +258,53 @@ export default function AuditAndStatistics() {
         <TabsContent value="audit" className="space-y-8 focus-visible:outline-none focus-visible:ring-0">
 
           <Card className="shadow-sm border-gray-200/60 overflow-hidden">
-            <CardHeader className="pb-3 bg-gray-50/50 border-b border-gray-100/50">
-              <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <History className="w-4 h-4 text-indigo-500" aria-hidden />
-                Audit Trail
-                <span className="ml-auto text-[10px] font-semibold text-gray-400 uppercase tracking-widest bg-gray-100/50 px-2 py-1 rounded">Auto-refreshes 30s</span>
-              </CardTitle>
+            <CardHeader className="pb-3 bg-gray-50/50 border-b border-gray-100/50 space-y-4">
+              <div className="flex justify-between items-center w-full">
+                <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <History className="w-4 h-4 text-indigo-500" aria-hidden />
+                  Audit Trail
+                  <span className="ml-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest bg-gray-100/50 px-2 py-1 rounded">Auto-refreshes 30s</span>
+                </CardTitle>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                  <Input 
+                    type="text" 
+                    placeholder="Search action, actor, target or details..." 
+                    className="pl-9 bg-white text-sm focus-visible:ring-primary/20"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[180px] bg-white text-sm focus:ring-primary/20">
+                     <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Categories</SelectItem>
+                    <SelectItem value="AI_GEMINI">Gemini AI</SelectItem>
+                    <SelectItem value="AI_HUGGINGFACE">HuggingFace AI</SelectItem>
+                    <SelectItem value="EMAIL">Email</SelectItem>
+                    <SelectItem value="HIRING">Hiring Decisions</SelectItem>
+                    <SelectItem value="CANDIDATE">Candidate Flow</SelectItem>
+                    <SelectItem value="VIOLATION">Violations</SelectItem>
+                    <SelectItem value="SECURITY">Security</SelectItem>
+                    <SelectItem value="SYSTEM">System</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                  <SelectTrigger className="w-[140px] bg-white text-sm focus:ring-primary/20">
+                     <SelectValue placeholder="All Severities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Severities</SelectItem>
+                    <SelectItem value="INFO">Info</SelectItem>
+                    <SelectItem value="WARN">Warning</SelectItem>
+                    <SelectItem value="CRITICAL">Critical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
@@ -276,8 +343,12 @@ export default function AuditAndStatistics() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {logs.map((log) => (
-                        <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                      {filteredLogs.map((log) => (
+                        <tr 
+                          key={log.id} 
+                          className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                          onClick={() => setSelectedLog(log)}
+                        >
                           <td className="px-6 py-3 text-gray-400 whitespace-nowrap text-xs">
                             {new Date(log.created_at).toLocaleString()}
                           </td>
@@ -309,6 +380,63 @@ export default function AuditAndStatistics() {
               )}
             </CardContent>
           </Card>
+          
+          <Dialog open={!!selectedLog} onOpenChange={(open: boolean) => !open && setSelectedLog(null)}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-lg">
+                   <FileText className="w-5 h-5 text-indigo-500" /> 
+                   Audit Record Details
+                </DialogTitle>
+                <DialogDescription asChild>
+                  <div className="text-xs font-mono text-gray-500 break-all pt-2 select-text">
+                    ID: {selectedLog?.id}
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 text-sm text-gray-700 mt-2">
+                 <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
+                   <div>
+                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Action</span>
+                     <span className="font-medium text-gray-900">{selectedLog?.action}</span>
+                   </div>
+                   <div>
+                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Date & Time</span>
+                     <span className="text-gray-900">{selectedLog?.created_at ? new Date(selectedLog.created_at).toLocaleString() : ''}</span>
+                   </div>
+                   <div>
+                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Actor (User/System)</span>
+                     <span className="text-gray-900 break-all">{selectedLog?.actor}</span>
+                   </div>
+                   <div>
+                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Target Entity</span>
+                     <span className="text-gray-900 break-all">{selectedLog?.target}</span>
+                   </div>
+                 </div>
+                 
+                 <div>
+                   <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Summary</span>
+                   <p className="text-gray-800 leading-relaxed bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                     {selectedLog?.details}
+                   </p>
+                 </div>
+                 
+                 {selectedLog?.metadata && (
+                    <div className="mt-6">
+                       <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2 flex flex-row items-center gap-2">
+                         <Layers className="w-3.5 h-3.5" /> Extended Metadata (AI / Request Data)
+                       </span>
+                       <pre className="bg-slate-900 border border-slate-800 p-4 rounded-xl overflow-x-auto text-[11px] text-emerald-400 font-mono shadow-inner custom-scrollbar">
+                          {typeof selectedLog.metadata === 'string' 
+                            ? selectedLog.metadata 
+                            : JSON.stringify(selectedLog.metadata, null, 2)}
+                       </pre>
+                    </div>
+                 )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
         </TabsContent>
 
         <TabsContent value="violations" className="focus-visible:outline-none focus-visible:ring-0">
