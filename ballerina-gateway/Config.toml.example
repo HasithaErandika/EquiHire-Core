@@ -1,7 +1,5 @@
 [gateway.config]
 
-port = 9092
-
 # Supabase
 supabaseUrl        = "https://your-project.supabase.co"
 supabaseAnonKey    = "your-anon-or-service-role-key"
@@ -9,7 +7,6 @@ supabaseServiceKey = "your-anon-or-service-role-key"
 
 # Google Gemini
 geminiApiKey = "<YOUR_GEMINI_KEY>"
-geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta"
 
 # HuggingFace
 hfToken = "<YOUR_HUGGINGFACE_TOKEN>"
@@ -19,7 +16,6 @@ r2AccountId  = "<YOUR_CLOUDFLARE_ACCOUNT_ID>"
 r2BucketName = "equihire"
 r2AccessKey  = "<YOUR_R2_ACCESS_KEY_ID>"
 r2SecretKey  = "<YOUR_R2_SECRET_KEY>"
-r2Region = "auto"
 
 # Frontend
 frontendUrl = "http://localhost:5173"

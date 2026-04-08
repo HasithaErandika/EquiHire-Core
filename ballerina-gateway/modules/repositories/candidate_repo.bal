@@ -41,7 +41,7 @@ public function createRecruiter(string userId, string email, string organization
 public function getOrganizationByUser(string userId) returns types:OrganizationResponse|error {
     string pathSub = string `/rest/v1/recruiters?select=organization_id&user_id=eq.${userId}`;
     http:Response rSub = check clients:supabaseHttpClient->get(
-        pathSub, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        pathSub, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if rSub.statusCode >= 300 {
         return error("getOrganizationByUser: recruiter lookup failed");
     }
@@ -53,7 +53,7 @@ public function getOrganizationByUser(string userId) returns types:OrganizationR
 
     string pathOrg = string `/rest/v1/organizations?id=eq.${orgId}`;
     http:Response rOrg = check clients:supabaseHttpClient->get(
-        pathOrg, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        pathOrg, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if rOrg.statusCode >= 300 {
         return error("getOrganizationByUser: org lookup failed");
     }
@@ -68,7 +68,7 @@ public function getOrganizationByUser(string userId) returns types:OrganizationR
 public function checkUserInOrganization(string userId, string organizationId) returns boolean|error {
     string path = string `/rest/v1/recruiters?user_id=eq.${userId}&organization_id=eq.${organizationId}&select=user_id`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 {
         return error("checkUserInOrganization failed");
     }
@@ -90,7 +90,7 @@ public function updateOrganization(string organizationId, string industry, strin
 public function getRecruiterId(string userId) returns string|error {
     string path = string `/rest/v1/recruiters?select=id&user_id=eq.${userId}`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 {
         return error("getRecruiterId failed for userId " + userId);
     }
@@ -149,6 +149,24 @@ public function createSecureIdentity(string candidateId, string r2ObjectKey, str
 
 // insertSecureIdentity removed — was a dead duplicate of createSecureIdentity.
 
+public function getR2ObjectKey(string candidateId) returns string|error {
+    string path = string `/rest/v1/secure_identities?candidate_id=eq.${candidateId}&select=r2_object_key`;
+    http:Response resp = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+    if resp.statusCode >= 300 {
+        return error("getR2ObjectKey: lookup failed for " + candidateId);
+    }
+    json[] rows = <json[]>check resp.getJsonPayload();
+    if rows.length() == 0 {
+        return error("getR2ObjectKey: no secure identity entry for " + candidateId);
+    }
+    json key = (<map<json>>rows[0])["r2_object_key"];
+    if key is () {
+        return error("getR2ObjectKey: r2_object_key is null for " + candidateId);
+    }
+    return key.toString();
+}
+
 // ---------------------------------------------------------------------------
 // Candidate Decision Support & Evaluation
 // ---------------------------------------------------------------------------
@@ -156,7 +174,7 @@ public function createSecureIdentity(string candidateId, string r2ObjectKey, str
 public function getJobIdForCandidate(string candidateId) returns string|error {
     string path = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=job_id`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 {
         return error("getJobIdForCandidate failed");
     }
@@ -171,7 +189,7 @@ public function getOrganizationIdForCandidate(string candidateId) returns string
     string jobId = check getJobIdForCandidate(candidateId);
     string path = string `/rest/v1/jobs?id=eq.${jobId}&select=organization_id`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 {
         return error("getOrganizationIdForCandidate: job lookup failed");
     }
@@ -185,7 +203,7 @@ public function getOrganizationIdForCandidate(string candidateId) returns string
 public function getCandidateDisplayName(string candidateId) returns string|error {
     string path = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=status,invitation_id`;
     http:Response resp = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if resp.statusCode >= 300 { return error("getCandidateDisplayName: profile not found"); }
     json[] profiles = <json[]>check resp.getJsonPayload();
     if profiles.length() == 0 { return error("Candidate not found: " + candidateId); }
@@ -197,7 +215,7 @@ public function getCandidateDisplayName(string candidateId) returns string|error
     if status == constants:STATUS_ACCEPTED && invId != "" {
         string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name`;
         http:Response iResp = check clients:supabaseHttpClient->get(
-            invPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+            invPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
         if iResp.statusCode < 300 {
             json[] invs = <json[]>check iResp.getJsonPayload();
             if invs.length() > 0 {
@@ -209,12 +227,54 @@ public function getCandidateDisplayName(string candidateId) returns string|error
     return string `Candidate #${candidateId.substring(0, 8)}`;
 }
 
+public function getCandidateName(string candidateId) returns record {|string candidateName; string candidateEmail; string jobTitle;|}|error {
+    string path = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id,job_id`;
+    http:Response resp = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+    if resp.statusCode >= 300 { return error("getCandidateName: profile not found for " + candidateId); }
+    json[] profiles = <json[]>check resp.getJsonPayload();
+    if profiles.length() == 0 { return error("Candidate not found: " + candidateId); }
+    map<json> profile = <map<json>>profiles[0];
+    string invId = profile["invitation_id"] is () ? "" : profile["invitation_id"].toString();
+    string jobId = profile["job_id"] is () ? "" : profile["job_id"].toString();
 
+    string candidateEmail = "";
+    string nameFallback = string `Candidate #${candidateId.substring(0, 8)}`;
+    string candidateNameVal = nameFallback;
+    string jobTitleVal = "the applied role";
+
+    if invId != "" {
+        string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name,candidate_email`;
+        http:Response iResp = check clients:supabaseHttpClient->get(
+            invPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        if iResp.statusCode < 300 {
+            json[] invs = <json[]>check iResp.getJsonPayload();
+            if invs.length() > 0 {
+                map<json> inv = <map<json>>invs[0];
+                candidateNameVal = inv["candidate_name"] is () ? nameFallback : inv["candidate_name"].toString();
+                candidateEmail = inv["candidate_email"] is () ? "" : inv["candidate_email"].toString();
+            }
+        }
+    }
+    if jobId != "" {
+        string jobPath = string `/rest/v1/jobs?id=eq.${jobId}&select=title`;
+        http:Response jResp = check clients:supabaseHttpClient->get(
+            jobPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        if jResp.statusCode < 300 {
+            json[] jobs = <json[]>check jResp.getJsonPayload();
+            if jobs.length() > 0 {
+                json t = (<map<json>>jobs[0])["title"];
+                jobTitleVal = t is () ? jobTitleVal : t.toString();
+            }
+        }
+    }
+    return {candidateName: candidateNameVal, candidateEmail: candidateEmail, jobTitle: jobTitleVal};
+}
 
 public function getCvRawText(string candidateId) returns string|error {
     string path = string `/rest/v1/cv_parsed_sections?candidate_id=eq.${candidateId}&select=raw_text`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 {
         return error("getCvRawText failed");
     }
@@ -226,31 +286,45 @@ public function getCvRawText(string candidateId) returns string|error {
     return rawText is () ? "" : rawText.toString();
 }
 
-public function getCandidateContact(string candidateId) returns record {|string candidateName; string candidateEmail; string jobTitle;|}|error {
-    string profPath = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id`;
+public function getCandidateTranscriptMetadata(string candidateId) returns record {|string name; string email; string role; string appliedDate; string jobId;|}|error {
+    string profPath = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id,created_at,job_id`;
     http:Response profResp = check clients:supabaseHttpClient->get(
         profPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
     if profResp.statusCode >= 300 {
-        return error("getCandidateContact: profile lookup failed for " + candidateId);
+        return error("getCandidateTranscriptMetadata: profile lookup failed for " + candidateId);
     }
     json[] profs = <json[]>check profResp.getJsonPayload();
     if profs.length() == 0 {
-        return error("getCandidateContact: no profile for " + candidateId);
+        return error("getCandidateTranscriptMetadata: no profile for " + candidateId);
     }
-    string invId = (<map<json>>profs[0])["invitation_id"].toString();
+    map<json> prof = <map<json>>profs[0];
+    json createdAtJson = prof["created_at"];
+    string appliedDate = createdAtJson is () ? "" : createdAtJson.toString();
+    json invIdJson = prof["invitation_id"];
+    
+    if invIdJson is () {
+        return {name: string `Candidate #${candidateId.substring(0, 8)}`, email: "Not Available", role: "Unknown Role", appliedDate: appliedDate, jobId: ""};
+    }
+    string invId = invIdJson.toString();
 
     string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name,candidate_email,job_title`;
     http:Response invResp = check clients:supabaseHttpClient->get(
-        invPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        invPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if invResp.statusCode >= 300 {
-        return error("getCandidateContact: invitation lookup failed for id " + invId);
+        return error("getCandidateTranscriptMetadata: invitation lookup failed for " + invId);
     }
     json[] invs = <json[]>check invResp.getJsonPayload();
     if invs.length() == 0 {
-        return error("getCandidateContact: invitation record not found " + invId);
+        return {name: string `Candidate #${candidateId.substring(0, 8)}`, email: "Not Available", role: "Unknown Role", appliedDate: appliedDate, jobId: ""};
     }
     map<json> inv = <map<json>>invs[0];
-    return {candidateName: inv["candidate_name"].toString(), candidateEmail: inv["candidate_email"].toString(), jobTitle: inv["job_title"].toString()};
+    return {
+        name: inv["candidate_name"].toString(), 
+        email: inv["candidate_email"].toString(), 
+        role: inv["job_title"].toString(),
+        appliedDate: appliedDate,
+        jobId: prof["job_id"].toString()
+    };
 }
 
 public function getCandidateEvaluation(string candidateId) returns record {|decimal overallScore; decimal cvScore; decimal skillsScore; decimal interviewScore; string summaryFeedback;|}|error {
@@ -262,7 +336,8 @@ public function getCandidateEvaluation(string candidateId) returns record {|deci
     }
     json[] evals = <json[]>check resp.getJsonPayload();
     if evals.length() == 0 {
-        return error("Evaluation not found for candidate " + candidateId);
+        // Log the failure to find
+        return error("No evaluation results found for candidate " + candidateId);
     }
     map<json> e = <map<json>>evals[0];
 
@@ -278,6 +353,13 @@ public function getCandidateEvaluation(string candidateId) returns record {|deci
 
     string feedback = e["summary_feedback"] is () ? "" : e["summary_feedback"].toString();
     return {overallScore: overall, cvScore: cv, skillsScore: skills, interviewScore: interview, summaryFeedback: feedback};
+}
+
+public function getRawEvaluation(string candidateId) returns json|error {
+    string path = string `/rest/v1/evaluation_results?candidate_id=eq.${candidateId}&select=*`;
+    http:Response resp = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+    return resp.getJsonPayload();
 }
 
 public function updateCandidateStatus(string candidateId, string newStatus) returns error? {
@@ -297,7 +379,7 @@ public function updateCandidateStatus(string candidateId, string newStatus) retu
 public function getPiiRedactionMap(string candidateId) returns map<json>|error {
     string path = string `/rest/v1/pii_entity_maps?candidate_id=eq.${candidateId}&select=redaction_map`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 {
         return error("getPiiRedactionMap failed for " + candidateId);
     }
@@ -322,7 +404,7 @@ public function insertPiiEntityMap(string candidateId, json entities, json redac
 public function getContextTags(string candidateId) returns types:ContextTags|error {
     string path = string `/rest/v1/candidate_context_tags?candidate_id=eq.${candidateId}&select=experience_level,detected_stack`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 {
         return error("getContextTags failed for " + candidateId);
     }
@@ -375,7 +457,7 @@ public function getCandidates(string organizationId) returns types:CandidateResp
 function fetchOrgJobs(string organizationId) returns [json[], map<string>]|error {
     string path = string `/rest/v1/jobs?organization_id=eq.${organizationId}&select=id,title`;
     http:Response r = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if r.statusCode >= 300 {
         return error("getCandidates: job fetch failed");
     }
@@ -403,7 +485,7 @@ function buildJobIdsFilter(json[] jobs) returns string {
 function fetchCandidateProfiles(string jobIdsFilter) returns json[]|error {
     string path = string `/rest/v1/anonymous_profiles?job_id=${jobIdsFilter}&select=candidate_id,job_id,status,created_at,invitation_id`;
     http:Response r = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if r.statusCode >= 300 {
         return error("getCandidates: profile fetch failed");
     }
@@ -413,7 +495,7 @@ function fetchCandidateProfiles(string jobIdsFilter) returns json[]|error {
 function fetchEvalMap(string jobIdsFilter) returns map<map<json>>|error {
     string path = string `/rest/v1/evaluation_results?job_id=${jobIdsFilter}&select=candidate_id,overall_score,cv_score,skills_score,interview_score,summary_feedback`;
     http:Response r = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     map<map<json>> evalMap = {};
     if r.statusCode < 300 {
         json[] evals = <json[]>check r.getJsonPayload();
@@ -428,7 +510,7 @@ function fetchEvalMap(string jobIdsFilter) returns map<map<json>>|error {
 function fetchInvitationNameMap(string organizationId) returns map<string>|error {
     string path = string `/rest/v1/interview_invitations?organization_id=eq.${organizationId}&select=id,candidate_name`;
     http:Response r = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     map<string> invMap = {};
     if r.statusCode < 300 {
         json[] invs = <json[]>check r.getJsonPayload();
@@ -443,7 +525,7 @@ function fetchInvitationNameMap(string organizationId) returns map<string>|error
 function fetchContextMap(string jobIdsFilter) returns map<map<json>>|error {
     string path = string `/rest/v1/candidate_context_tags?job_id=${jobIdsFilter}&select=candidate_id,experience_level,detected_stack,hf_relevance_skipped`;
     http:Response r = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     map<map<json>> ctxMap = {};
     if r.statusCode < 300 {
         json[] ctxs = <json[]>check r.getJsonPayload();
@@ -458,7 +540,7 @@ function fetchContextMap(string jobIdsFilter) returns map<map<json>>|error {
 function fetchCvParsedMap(string jobIdsFilter) returns map<map<json>>|error {
     string path = string `/rest/v1/cv_parsed_sections?job_id=${jobIdsFilter}&select=candidate_id,raw_text,education,work_experience,projects`;
     http:Response r = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     map<map<json>> cvMap = {};
     if r.statusCode < 300 {
         json[] cvs = <json[]>check r.getJsonPayload();
@@ -474,7 +556,7 @@ function fetchCheatMap(string jobIdsFilter) returns map<record {|int count; stri
     // Scope cheat events to candidates belonging to this org's jobs via exam_sessions.
     string sessionPath = string `/rest/v1/exam_sessions?job_id=${jobIdsFilter}&select=candidate_id`;
     http:Response sResp = check clients:supabaseHttpClient->get(
-        sessionPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        sessionPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     map<record {|int count; string[] types;|}> cheatMap = {};
     if sResp.statusCode >= 300 {
         return cheatMap;
@@ -496,7 +578,7 @@ function fetchCheatMap(string jobIdsFilter) returns map<record {|int count; stri
 
     string cheatPath = string `/rest/v1/cheat_events?candidate_id=${candidateIdFilter}&select=candidate_id,event_type`;
     http:Response r = check clients:supabaseHttpClient->get(
-        cheatPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        cheatPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if r.statusCode < 300 {
         json[] events = <json[]>check r.getJsonPayload();
         foreach json e in events {

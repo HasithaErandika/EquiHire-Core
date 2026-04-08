@@ -1,9 +1,9 @@
 /**
- * @fileoverview Hook for audit logs and stats; supports refresh and auto-refresh interval.
- * Uses a sequential professional palette for varied chart colors.
+ * @fileoverview Hook for audit logs, stats, and client-side filtering.
+ * Supports search by actor/details, action type multi-select, and date range.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { API } from '@/lib/api';
 import type { AuditLog } from '@/types';
 
@@ -24,6 +24,12 @@ export interface ActionDistribution {
   fill: string;
 }
 
+export interface AuditFilters {
+  searchQuery: string;
+  actionFilter: string[];   // Empty = show all actions
+  dateFrom: string;         // ISO date string YYYY-MM-DD
+}
+
 export interface UseAuditOptions {
   userId: string | undefined;
   /** Auto-refresh interval in ms; 0 to disable. Default 30000. */
@@ -32,10 +38,18 @@ export interface UseAuditOptions {
 
 export interface UseAuditResult {
   logs: AuditLog[];
+  filteredLogs: AuditLog[];
   stats: AuditStats;
+  filteredStats: AuditStats;
   activityTimeSeries: ActivityPoint[];
   actionDistribution: ActionDistribution[];
   lastSynced: Date | null;
+
+  filters: AuditFilters;
+  setFilters: (f: Partial<AuditFilters>) => void;
+  resetFilters: () => void;
+  isFiltered: boolean;
+  uniqueActions: string[];
 
   isLoading: boolean;
   isSyncing: boolean;
@@ -51,7 +65,7 @@ const CHART_PALETTE = [
   '#0EA5E9', // Sky 600
   '#10B981', // Emerald 600
   '#F59E0B', // Amber 600
-  '#3B82F6', // Blue 600 (The "Good" Blue)
+  '#3B82F6', // Blue 600
   '#8B5CF6', // Violet 600
   '#EC4899', // Pink 600
   '#14B8A6', // Teal 600
@@ -63,8 +77,15 @@ const CHART_PALETTE = [
   '#64748B', // Slate 600
 ];
 
+const DEFAULT_FILTERS: AuditFilters = {
+  searchQuery: '',
+  actionFilter: [],
+  dateFrom: '',
+};
+
 /**
- * Loads audit logs for the user's organization and computes basic stats.
+ * Loads audit logs for the user's organization, computes stats/charts,
+ * and provides client-side filtering by search, action type, and date.
  */
 export function useAudit({
   userId,
@@ -79,17 +100,34 @@ export function useAudit({
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [actionColors, setActionColors] = useState<Map<string, string>>(new Map());
+  const [filters, setFiltersState] = useState<AuditFilters>(DEFAULT_FILTERS);
+
+  const setFilters = useCallback((f: Partial<AuditFilters>) => {
+    setFiltersState(prev => ({ ...prev, ...f }));
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setFiltersState(DEFAULT_FILTERS);
+  }, []);
 
   const getActionColor = useCallback((action: string) => {
     const a = action.toLowerCase();
     if (a.includes('delete') || a.includes('remove')) return 'text-red-700 bg-red-50 border-red-100';
     if (a.includes('create') || a.includes('add')) return 'text-emerald-700 bg-emerald-50 border-emerald-100';
-    if (a.includes('update') || a.includes('edit')) return 'text-sky-700 bg-sky-50 border-sky-100';
+    if (a.includes('update') || a.includes('edit') || a.includes('updated')) return 'text-sky-700 bg-sky-50 border-sky-100';
     if (a.includes('invite')) return 'text-indigo-700 bg-indigo-50 border-indigo-100';
-    if (a.includes('submit')) return 'text-violet-700 bg-violet-50 border-violet-100';
+    if (a.includes('submit') || a.includes('assessment')) return 'text-violet-700 bg-violet-50 border-violet-100';
     if (a.includes('login') || a.includes('auth')) return 'text-purple-700 bg-purple-50 border-purple-100';
     if (a.includes('lockdown') || a.includes('cheat') || a.includes('violation')) return 'text-orange-700 bg-orange-50 border-orange-100';
-    if (a.includes('reveal') || a.includes('view') || a.includes('acceptance') || a.includes('send')) return 'text-blue-700 bg-blue-50 border-blue-100';
+    if (a.includes('accepted') || a.includes('accept')) return 'text-green-700 bg-green-50 border-green-100';
+    if (a.includes('rejected') || a.includes('reject')) return 'text-red-700 bg-red-50 border-red-100';
+    if (a.includes('status')) return 'text-yellow-700 bg-yellow-50 border-yellow-100';
+    if (a.includes('transcript') || a.includes('viewed')) return 'text-cyan-700 bg-cyan-50 border-cyan-100';
+    if (a.includes('cv') || a.includes('reveal') || a.includes('accessed')) return 'text-blue-700 bg-blue-50 border-blue-100';
+    if (a.includes('session') || a.includes('started')) return 'text-teal-700 bg-teal-50 border-teal-100';
+    if (a.includes('uploaded') || a.includes('upload')) return 'text-amber-700 bg-amber-50 border-amber-100';
+    if (a.includes('organization')) return 'text-slate-700 bg-slate-50 border-slate-100';
+    if (a.includes('reveal') || a.includes('view') || a.includes('send')) return 'text-blue-700 bg-blue-50 border-blue-100';
     if (a.includes('sync') || a.includes('refresh')) return 'text-cyan-700 bg-cyan-50 border-cyan-100';
     if (a.includes('export') || a.includes('download')) return 'text-amber-700 bg-amber-50 border-amber-100';
     if (a.includes('flag') || a.includes('alert')) return 'text-rose-700 bg-rose-50 border-rose-100';
@@ -100,7 +138,6 @@ export function useAudit({
   const getActionHex = useCallback((action: string) => {
     return actionColors.get(action) || '#64748B';
   }, [actionColors]);
-
 
   const computeChartData = useCallback((auditLogs: AuditLog[]) => {
     // 1. Time Series: last 7 days including today
@@ -115,13 +152,10 @@ export function useAudit({
     const distMap = new Map<string, number>();
 
     auditLogs.forEach(log => {
-      // time series logic
       const logDate = new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (seriesMap.has(logDate)) {
         seriesMap.set(logDate, seriesMap.get(logDate)! + 1);
       }
-
-      // distribution logic
       const actionKey = log.action;
       distMap.set(actionKey, (distMap.get(actionKey) || 0) + 1);
     });
@@ -131,8 +165,7 @@ export function useAudit({
     const colorMap = new Map<string, string>();
     const distData = Array.from(distMap.entries())
       .map(([action, count], index) => {
-        const isSend = action.toLowerCase().includes('send');
-        const fill = isSend ? '#3B82F6' : CHART_PALETTE[index % CHART_PALETTE.length];
+        const fill = CHART_PALETTE[index % CHART_PALETTE.length];
         colorMap.set(action, fill);
         return { action, count, fill };
       })
@@ -152,9 +185,7 @@ export function useAudit({
       const todayLogs = list.filter((l: AuditLog) => new Date(l.created_at).toDateString() === today);
       const uniqueActors = new Set(list.map((l: AuditLog) => l.actor));
       setStats({ total: list.length, today: todayLogs.length, actors: uniqueActors.size });
-
       computeChartData(list);
-
       setLastSynced(new Date());
     } catch (err) {
       console.error('Failed to refresh audit logs', err);
@@ -186,9 +217,7 @@ export function useAudit({
         if (!cancelled) setIsLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [userId, refreshLogs]);
 
   useEffect(() => {
@@ -197,12 +226,75 @@ export function useAudit({
     return () => clearInterval(interval);
   }, [orgId, autoRefreshMs, refreshLogs]);
 
+  // ─── Client-side filter logic ─────────────────────────────────────────────
+  const filteredLogs = useMemo(() => {
+    let result = logs;
+
+    if (filters.searchQuery.trim()) {
+      const q = filters.searchQuery.toLowerCase().trim();
+      result = result.filter(
+        l =>
+          l.actor.toLowerCase().includes(q) ||
+          l.details.toLowerCase().includes(q) ||
+          l.action.toLowerCase().includes(q) ||
+          l.target.toLowerCase().includes(q)
+      );
+    }
+
+    if (filters.actionFilter.length > 0) {
+      const allowed = new Set(filters.actionFilter);
+      result = result.filter(l => allowed.has(l.action));
+    }
+
+    if (filters.dateFrom) {
+      const from = new Date(filters.dateFrom);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(filters.dateFrom);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter(l => {
+        const d = new Date(l.created_at);
+        return d >= from && d <= to;
+      });
+    }
+
+    return result;
+  }, [logs, filters]);
+
+  const filteredStats = useMemo<AuditStats>(() => {
+    const today = new Date().toDateString();
+    return {
+      total: filteredLogs.length,
+      today: filteredLogs.filter(l => new Date(l.created_at).toDateString() === today).length,
+      actors: new Set(filteredLogs.map(l => l.actor)).size,
+    };
+  }, [filteredLogs]);
+
+  const uniqueActions = useMemo(
+    () => Array.from(new Set(logs.map(l => l.action))).sort(),
+    [logs]
+  );
+
+  const isFiltered = useMemo(
+    () =>
+      filters.searchQuery.trim() !== '' ||
+      filters.actionFilter.length > 0 ||
+      filters.dateFrom !== '',
+    [filters]
+  );
+
   return {
     logs,
+    filteredLogs,
     stats,
+    filteredStats,
     activityTimeSeries,
     actionDistribution,
     lastSynced,
+    filters,
+    setFilters,
+    resetFilters,
+    isFiltered,
+    uniqueActions,
     isLoading,
     isSyncing,
     refresh,

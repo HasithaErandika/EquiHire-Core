@@ -84,7 +84,7 @@ public function upsertCvEvaluationResult(string candidateId, string jobId, float
 public function getAuditLogs(string organizationId) returns json[]|error {
     string path = string `/rest/v1/audit_logs?organization_id=eq.${organizationId}&select=id,action_type,entity_type,entity_id,details,created_at,recruiter_id,recruiters(email,full_name)&order=created_at.desc`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getAuditLogs failed"); }
     json[] rows = <json[]>check response.getJsonPayload();
     json[] result = [];
@@ -137,7 +137,7 @@ public function getCandidateTranscript(string candidateId) returns types:Transcr
     string path = string `/rest/v1/grading_results?candidate_id=eq.${candidateId}&select=redacted_answer,score,feedback,hf_gate_passed,was_flagged,questions(question_text,type,sample_answer)`;
     
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     
     if response.statusCode >= 300 {
         return error("getCandidateTranscript failed for candidate " + candidateId);
@@ -195,7 +195,7 @@ public function createInvitation(string token, string candidateEmail, string can
 public function getInvitationByToken(string token) returns types:InvitationRecord|error {
     string path = string `/rest/v1/interview_invitations?token=eq.${token}`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getInvitationByToken failed"); }
     json[] rows = <json[]>check response.getJsonPayload();
     if rows.length() == 0 { return error("Invitation not found for token"); }
@@ -232,7 +232,7 @@ public function acceptInvitation(string id, string usedAt) returns error? {
 public function getInvitationsByRecruiter(string recruiterId) returns json[]|error {
     string path = string `/rest/v1/interview_invitations?recruiter_id=eq.${recruiterId}&select=id,candidate_email,candidate_name,job_title,status,created_at&order=created_at.desc`;
     http:Response response = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if response.statusCode >= 300 { return error("getInvitationsByRecruiter failed"); }
     return <json[]>check response.getJsonPayload();
 }

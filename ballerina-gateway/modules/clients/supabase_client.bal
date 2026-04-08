@@ -5,12 +5,7 @@ import ballerina/http;
 import equihire/gateway.config;
 
 public final http:Client supabaseHttpClient = check new (config:supabaseUrl, {
-    timeout: 30,
-    poolConfig: {
-        maxActiveConnections: 10,
-        maxIdleConnections: 5,
-        waitTime: 2
-    }
+    timeout: 30
 });
 
 public function getSupabaseHeaders() returns map<string|string[]> {

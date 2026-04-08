@@ -109,5 +109,13 @@ public type TranscriptItem record {|
 public type TranscriptResponse record {|
     string candidateId;
     string candidateName;
+    string candidateEmail;
+    string jobTitle;
+    string appliedDate;
+    float overallScore;
+    float cvScore;
+    float skillsScore;
+    float interviewScore;
+    string summaryFeedback;
     TranscriptItem[] transcript;
 |};

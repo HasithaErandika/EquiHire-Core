@@ -30,44 +30,15 @@ export type {
   Candidate,
 } from '@/types';
 
-const API_BASE_URL = (window.configs?.VITE_API_URL || import.meta.env.VITE_API_URL) || 'http://localhost:9092';
-
-/**
- * Gets the authentication token from localStorage or sessionStorage
- */
-function getAuthToken(): string | null {
-  // Adjust this based on where your auth system stores the token
-  return localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-}
-
-/**
- * Creates headers with authentication
- */
-function getHeaders(includeContentType = true): HeadersInit {
-  const headers: HeadersInit = {};
-  
-  const token = getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  if (includeContentType) {
-    headers['Content-Type'] = 'application/json';
-  }
-  
-  return headers;
-}
+const API_BASE_URL = ((window.configs?.VITE_API_URL || import.meta.env.VITE_API_URL) || 'http://localhost:9092') + '/api';
 
 /**
  * Fetches the organization for the given user id. Returns null if not found (404).
  */
 export async function getOrganization(userId: string): Promise<Organization | null> {
-  const response = await fetch(`${API_BASE_URL}/me/organization?userId=${userId}`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/me/organization?userId=${userId}`);
   if (!response.ok) {
     if (response.status === 404) return null;
-    if (response.status === 401) throw new Error('Unauthorized - please log in again');
     throw new Error('Failed to fetch organization');
   }
   return response.json();
@@ -79,7 +50,7 @@ export async function getOrganization(userId: string): Promise<Organization | nu
 export async function createOrganization(data: CreateOrganizationPayload): Promise<Response> {
   const response = await fetch(`${API_BASE_URL}/organizations`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error('Failed to create organization');
@@ -95,7 +66,7 @@ export async function updateOrganization(
 ): Promise<Response> {
   const response = await fetch(`${API_BASE_URL}/organization`, {
     method: 'PUT',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...data, organizationId: orgId }),
   });
   if (!response.ok) throw new Error('Failed to update organization');
@@ -104,13 +75,14 @@ export async function updateOrganization(
 
 /**
  * Creates an invitation and returns the created record (e.g. with magicLink).
+ * Backend may accept extra fields (jobTitle, interviewDate, recruiterId).
  */
 export async function createInvitation(
   data: CreateInvitationPayload & Record<string, unknown>
 ): Promise<Invitation & { magicLink?: string }> {
   const response = await fetch(`${API_BASE_URL}/invitations`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error('Failed to send invitation');
@@ -123,7 +95,7 @@ export async function createInvitation(
 export async function createJob(data: CreateJobPayload & Record<string, unknown>): Promise<Job> {
   const response = await fetch(`${API_BASE_URL}/jobs`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error('Failed to create job');
@@ -136,7 +108,7 @@ export async function createJob(data: CreateJobPayload & Record<string, unknown>
 export async function createJobQuestions(questions: QuestionPayload[]): Promise<unknown> {
   const response = await fetch(`${API_BASE_URL}/jobs/questions`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ questions }),
   });
   if (!response.ok) {
@@ -151,9 +123,7 @@ export async function createJobQuestions(questions: QuestionPayload[]): Promise<
  * Fetches all questions for a job.
  */
 export async function getJobQuestions(jobId: string): Promise<Question[]> {
-  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/questions`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/questions`);
   if (!response.ok) throw new Error('Failed to fetch questions');
   return response.json();
 }
@@ -162,10 +132,7 @@ export async function getJobQuestions(jobId: string): Promise<Question[]> {
  * Deletes a question by id.
  */
 export async function deleteQuestion(questionId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
-    method: 'DELETE',
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, { method: 'DELETE' });
   if (!response.ok) throw new Error('Failed to delete question');
 }
 
@@ -173,9 +140,7 @@ export async function deleteQuestion(questionId: string): Promise<void> {
  * Fetches all jobs for the given user.
  */
 export async function getJobs(userId: string): Promise<Job[]> {
-  const response = await fetch(`${API_BASE_URL}/jobs?userId=${userId}`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/jobs?userId=${userId}`);
   if (!response.ok) throw new Error('Failed to fetch jobs');
   return response.json();
 }
@@ -184,9 +149,7 @@ export async function getJobs(userId: string): Promise<Job[]> {
  * Fetches evaluation templates for an organization.
  */
 export async function getEvaluationTemplates(orgId: string): Promise<EvaluationTemplate[]> {
-  const response = await fetch(`${API_BASE_URL}/organizations/${orgId}/evaluation-templates`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/organizations/${orgId}/evaluation-templates`);
   if (!response.ok) throw new Error('Failed to fetch evaluation templates');
   return response.json();
 }
@@ -200,7 +163,7 @@ export async function createEvaluationTemplate(
 ): Promise<EvaluationTemplate> {
   const response = await fetch(`${API_BASE_URL}/evaluation-templates`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...data, organizationId: orgId }),
   });
   if (!response.ok) throw new Error('Failed to create evaluation template');
@@ -217,7 +180,7 @@ export async function updateEvaluationTemplate(
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/evaluation-templates/${templateId}`, {
     method: 'PUT',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...data, organizationId: orgId }),
   });
   if (!response.ok) throw new Error('Failed to update evaluation template');
@@ -229,7 +192,7 @@ export async function updateEvaluationTemplate(
 export async function deleteEvaluationTemplate(orgId: string, templateId: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/evaluation-templates/${templateId}`, {
     method: 'DELETE',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ organizationId: orgId }),
   });
   if (!response.ok) throw new Error('Failed to delete evaluation template');
@@ -239,9 +202,7 @@ export async function deleteEvaluationTemplate(orgId: string, templateId: string
  * Fetches all invitations for the given user.
  */
 export async function getInvitations(userId: string): Promise<Invitation[]> {
-  const response = await fetch(`${API_BASE_URL}/invitations?userId=${userId}`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/invitations?userId=${userId}`);
   if (!response.ok) throw new Error('Failed to fetch invitations');
   return response.json();
 }
@@ -250,15 +211,8 @@ export async function getInvitations(userId: string): Promise<Invitation[]> {
  * Uploads a CV file for a candidate (multipart/form-data).
  */
 export async function uploadCv(formData: FormData): Promise<UploadCvResponse> {
-  const token = getAuthToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
   const response = await fetch(`${API_BASE_URL}/candidates/upload-cv`, {
     method: 'POST',
-    headers, // Don't include Content-Type for FormData
     body: formData,
   });
   if (!response.ok) {
@@ -272,9 +226,7 @@ export async function uploadCv(formData: FormData): Promise<UploadCvResponse> {
  * Validates an invitation token and returns validation result and candidate context.
  */
 export async function validateInvitation(token: string): Promise<import('@/types').ValidateInvitationResponse> {
-  const response = await fetch(`${API_BASE_URL}/invitations/validate/${token}`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/invitations/validate/${token}`);
   if (!response.ok) {
     if (response.status === 404) return { valid: false, message: 'Invitation not found' };
     throw new Error('Failed to validate invitation');
@@ -291,7 +243,7 @@ export async function startExamSession(
 ): Promise<StartSessionResponse> {
   const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/start-session`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error('Failed to start exam session');
@@ -307,7 +259,7 @@ export async function submitCandidateAnswers(
 ): Promise<unknown> {
   const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/evaluate`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error('Failed to submit answers');
@@ -318,49 +270,56 @@ export async function submitCandidateAnswers(
  * Fetches candidates for an organization (dashboard list).
  */
 export async function getCandidates(orgId: string): Promise<Candidate[]> {
-  const response = await fetch(`${API_BASE_URL}/organizations/${orgId}/candidates`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/organizations/${orgId}/candidates`);
   if (!response.ok) throw new Error('Failed to fetch candidates');
   return response.json();
 }
 
 /**
  * Applies accept/reject decision for a candidate.
+ * @param candidateId - The candidate ID
+ * @param decision - Explicit decision: 'accepted' or 'rejected'
  */
 export async function decideCandidate(
   candidateId: string,
-  threshold: number,
-  decision: 'auto' | 'accepted' | 'rejected' = 'auto'
+  decision: 'accepted' | 'rejected'
 ): Promise<unknown> {
   const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/decide`, {
     method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({ threshold, decision }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision }),
   });
   if (!response.ok) throw new Error('Decision failed');
   return response.json();
 }
 
 /**
- * Updates a job by id.
+ * Updates a job by id. Pass organizationId + userId for audit logging.
  */
-export async function updateJob(jobId: string, data: UpdateJobPayload): Promise<void> {
+export async function updateJob(
+  jobId: string,
+  data: UpdateJobPayload,
+  context?: { organizationId?: string; userId?: string }
+): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
     method: 'PUT',
-    headers: getHeaders(),
-    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...data, ...context }),
   });
   if (!response.ok) throw new Error('Failed to update job');
 }
 
 /**
- * Deletes a job by id.
+ * Deletes a job by id. Pass organizationId + userId for audit logging.
  */
-export async function deleteJob(jobId: string): Promise<void> {
+export async function deleteJob(
+  jobId: string,
+  context?: { organizationId?: string; recruiterId?: string }
+): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
     method: 'DELETE',
-    headers: getHeaders(false),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...context }),
   });
   if (!response.ok) throw new Error('Failed to delete job');
 }
@@ -374,7 +333,7 @@ export async function updateQuestion(
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
     method: 'PUT',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error('Failed to update question');
@@ -384,9 +343,7 @@ export async function updateQuestion(
  * Fetches audit logs for an organization.
  */
 export async function getAuditLogs(orgId: string): Promise<import('@/types').AuditLog[]> {
-  const response = await fetch(`${API_BASE_URL}/organizations/${orgId}/audit-logs`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/organizations/${orgId}/audit-logs`);
   if (!response.ok) throw new Error('Failed to fetch audit logs');
   return response.json();
 }
@@ -395,9 +352,7 @@ export async function getAuditLogs(orgId: string): Promise<import('@/types').Aud
  * Fetches the presigned URL to reveal the candidate's original CV (PII data).
  */
 export async function revealCandidate(candidateId: string): Promise<{ url: string; status: string }> {
-  const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/reveal`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/reveal`);
   if (!response.ok) throw new Error('Failed to reveal candidate');
   return response.json();
 }
@@ -406,14 +361,12 @@ export async function revealCandidate(candidateId: string): Promise<{ url: strin
  * Fetches the transcript for a candidate.
  */
 export async function getTranscript(candidateId: string): Promise<import('@/types').TranscriptResponse> {
-  const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/transcript`, {
-    headers: getHeaders(false),
-  });
+  const response = await fetch(`${API_BASE_URL}/candidates/${candidateId}/transcript`);
   if (!response.ok) throw new Error('Failed to fetch transcript');
   return response.json();
 }
 
-/** Central API object */
+/** Central API object — all functions are also exported individually above. */
 export const API = {
   getOrganization,
   createOrganization,
@@ -448,3 +401,4 @@ export const API = {
   revealCandidate,
   getTranscript,
 };
+

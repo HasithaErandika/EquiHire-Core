@@ -8,13 +8,12 @@ Return a JSON object with these fields:
 - "sections": { "education": [...], "work_experience": [...], "projects": [...], "achievements": [...], "certificates": [...] }
 - "detectedStack": ["Python", "React", ...]  (technologies found)
 - "experienceLevel": "Junior" | "Mid" | "Senior"  (estimated level)
-- "piiMap": { "original_name": "[REDACTED_NAME]", "original_email": "[REDACTED_EMAIL]", "University Name": "[REDACTED_UNIVERSITY]", ... }
+- "piiMap": { "original_name": "[REDACTED_NAME]", "original_email": "[REDACTED_EMAIL]", ... }
 
 IMPORTANT:
 - Identify ALL personally identifiable information (PII) and include them in piiMap
-- PII MUST include: exact names, emails, phone numbers, addresses, LinkedIn URLs, GitHub URLs
-- PII MUST ALSO include: company names, university or school names, and specific project client names
-- Be highly thorough — missing PII is a severe privacy violation
+- PII includes: names, emails, phone numbers, addresses, LinkedIn URLs, GitHub URLs, etc.
+- Be thorough — missing PII is a privacy violation
 - Return ONLY valid JSON, no markdown code fences
 
 CV Text:

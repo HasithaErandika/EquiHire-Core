@@ -22,8 +22,6 @@ export interface UseCandidatesResult {
   selectedCandidate: ExtendedCandidate | null;
   /** Current org id after load */
   orgId: string;
-  /** Auto-pass threshold percentage (e.g. 70) */
-  threshold: number;
   /** Whether initial load or refresh is in progress */
   isLoading: boolean;
   /** Whether a decision (accept/reject) request is in progress */
@@ -32,13 +30,6 @@ export interface UseCandidatesResult {
   setStatusFilter: (v: StatusFilter) => void;
   activityFilter: ActivityFilter;
   setActivityFilter: (v: ActivityFilter) => void;
-  setThreshold: (v: number) => void;
-  cvWeight: number;
-  setCvWeight: (v: number) => void;
-  skillsWeight: number;
-  setSkillsWeight: (v: number) => void;
-  interviewWeight: number;
-  setInterviewWeight: (v: number) => void;
   setSelectedCandidate: (c: ExtendedCandidate | null) => void;
   /** Mark a candidate as seen and optionally open detail panel */
   handleViewDetails: (candidate: ExtendedCandidate) => void;
@@ -61,10 +52,6 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
   const [selectedCandidate, setSelectedCandidate] = useState<ExtendedCandidate | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
-  const [threshold, setThreshold] = useState<number>(70);
-  const [cvWeight, setCvWeight] = useState<number>(30);
-  const [skillsWeight, setSkillsWeight] = useState<number>(40);
-  const [interviewWeight, setInterviewWeight] = useState<number>(30);
   const [orgId, setOrgId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -105,25 +92,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
     if (userId) loadData(userId);
   }, [userId, loadData]);
 
-  const mappedCandidates = candidates.map((c) => {
-    // Never recalculate status for finalized decisions — they are authoritative.
-    if (c.status === 'accepted' || c.status === 'rejected') return c;
-
-    if (cvWeight + skillsWeight + interviewWeight === 100) {
-      const cvP = typeof c.cvScore === 'number' ? c.cvScore : 0;
-      const skillsP = typeof c.skillsScore === 'number' ? c.skillsScore : 0;
-      const intP = typeof c.interviewScore === 'number' ? c.interviewScore : 0;
-
-      if (cvP > 0 || skillsP > 0 || intP > 0) {
-        const weightedScore = Math.round(
-          (cvP * cvWeight + skillsP * skillsWeight + intP * interviewWeight) / 100
-        );
-        const newStatus = (weightedScore >= threshold ? 'shortlisted' : 'pending') as ExtendedCandidate['status'];
-        return { ...c, score: weightedScore, status: newStatus };
-      }
-    }
-    return c;
-  });
+  const mappedCandidates = candidates;
 
   // Sort: newest application first. Use createdAt or appliedDate as tie-breaker.
   const sortedCandidates = [...mappedCandidates].sort((a, b) => {
@@ -163,7 +132,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
     async (candidateId: string) => {
       setIsProcessing(true);
       try {
-        await API.decideCandidate(candidateId, threshold);
+        await API.decideCandidate(candidateId, 'accepted'); // Default to accepted if called directly from generic handler
         await fetchCandidates(orgId);
 
         // Refresh the selected candidate to show revealed PII
@@ -176,7 +145,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         setIsProcessing(false);
       }
     },
-    [threshold, orgId, fetchCandidates]
+    [orgId, fetchCandidates]
   );
 
   const handleAcceptCandidate = useCallback(
@@ -184,7 +153,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
       setIsProcessing(true);
       try {
         // Backend handles acceptance email in the decide endpoint
-        await API.decideCandidate(candidateId, threshold, 'accepted');
+        await API.decideCandidate(candidateId, 'accepted');
 
         // Refresh candidates list and selected candidate details
         await fetchCandidates(orgId);
@@ -198,7 +167,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         setIsProcessing(false);
       }
     },
-    [threshold, orgId, fetchCandidates]
+    [orgId, fetchCandidates]
   );
 
   const handleRejectCandidate = useCallback(
@@ -206,7 +175,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
       setIsProcessing(true);
       try {
         // Backend handles rejection email with scores in the decide endpoint
-        await API.decideCandidate(candidateId, threshold, 'rejected');
+        await API.decideCandidate(candidateId, 'rejected');
 
         // Refresh candidates list and selected candidate details
         await fetchCandidates(orgId);
@@ -220,7 +189,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         setIsProcessing(false);
       }
     },
-    [threshold, orgId, fetchCandidates]
+    [orgId, fetchCandidates]
   );
 
 
@@ -229,20 +198,12 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
     filteredCandidates,
     selectedCandidate: activeSelectedCandidate,
     orgId,
-    threshold,
     isLoading,
     isProcessing,
     statusFilter,
     setStatusFilter,
     activityFilter,
     setActivityFilter,
-    setThreshold,
-    cvWeight,
-    setCvWeight,
-    skillsWeight,
-    setSkillsWeight,
-    interviewWeight,
-    setInterviewWeight,
     setSelectedCandidate,
     handleViewDetails,
     handleAcceptCandidate,

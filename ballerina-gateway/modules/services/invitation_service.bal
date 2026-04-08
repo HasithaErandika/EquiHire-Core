@@ -11,7 +11,7 @@ import equihire/gateway.types;
 
 public function createInvitation(types:InvitationRequest payload,
                                  string recruiterId) returns types:InvitationResponse|error {
-    string token     = uuid:createType4AsString();
+    string token     = uuid:createType1AsString();
     string expiresAt = buildExpiry();
     string magicLink = config:frontendUrl + "/invite/" + token;
 
@@ -42,17 +42,10 @@ public function validateToken(string token) returns types:TokenValidationRespons
         return {valid: false, message: "Invitation not found or already deleted"};
     }
 
-    // Check 1: Token must not have been used already
     if result.used_at !is () {
         return {valid: false, message: "This invitation link has already been used"};
     }
 
-    // Check 2: Status must be 'pending' — prevents replay if already accepted/expired
-    if result.status != constants:STATUS_PENDING {
-        return {valid: false, message: "This invitation is no longer valid (status: " + result.status + ")"};
-    }
-
-    // Check 3: Token must not be expired
     time:Utc|error expiry = parseExpiry(result.expires_at);
     if expiry is error {
         log:printError("Failed to parse invitation expiry", 'error = expiry, token = token);
@@ -64,11 +57,15 @@ public function validateToken(string token) returns types:TokenValidationRespons
         return {valid: false, message: "This invitation link has expired"};
     }
 
-    // Mark as accepted atomically — prevents replay on refresh
     string usedAt = time:utcToString(time:utcNow());
     check repositories:acceptInvitation(result.id, usedAt);
 
-    log:printInfo("Token validated and accepted", candidateEmail = result.candidate_email, invitationId = result.id);
+    _ = start repositories:createAuditLog(
+        result.organization_id, (),
+        constants:AUDIT_INVITATION_ACCEPTED, "Invitation", result.id,
+        {"candidateEmail": result.candidate_email, "jobId": result.job_id});
+
+    log:printInfo("Token validated", candidateEmail = result.candidate_email);
     return {
         valid: true,
         candidateEmail:  result.candidate_email,

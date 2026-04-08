@@ -28,6 +28,8 @@ public type JobUpdateRequest record {
     string description;
     string[] requiredSkills;
     string? evaluationTemplateId = ();
+    string? organizationId = ();   // Optional: used for audit logging
+    string? recruiterId = ();      // Optional: used for audit logging
 };
 
 // Bulk-creates questions for a job.
@@ -95,6 +97,5 @@ public type CheatEventItem record {|
 
 // Pass/fail decision by recruiter.
 public type DecisionRequest record {|
-    decimal threshold;
-    string decision = "auto"; // 'auto' (based on threshold), 'accepted', or 'rejected'
+    string decision; // 'accepted' or 'rejected'
 |};

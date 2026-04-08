@@ -1,53 +1,152 @@
 /**
- * Audit & Statistics view: stats cards and audit log table with auto-refresh.
- * Uses useAudit for logs, stats, sync, and action badge styling.
+ * Audit & Statistics view: stats cards, charts, and an audit log table
+ * with a professional search/filter bar. Uses useAudit for all data logic.
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuthContext } from '@asgardeo/auth-react';
 import { useAudit } from '@/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, Clock, Users, AlertCircle, RefreshCw, BarChart2, History, PieChart as PieChartIcon, Search, FileText, Layers } from 'lucide-react';
+import {
+  Activity, Clock, Users, AlertCircle, RefreshCw, BarChart2,
+  History, PieChart as PieChartIcon, Search, ChevronDown,
+  X, SlidersHorizontal, Calendar,
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Area, AreaChart, CartesianGrid, XAxis, PieChart, Pie, Label } from 'recharts';
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import {
+  type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent,
+} from '@/components/ui/chart';
 import CandidateViolations from './CandidateViolations';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { deriveCategory } from '@/types/audit';
-import type { AuditLog } from '@/types/audit';
+
+// ─── Action-filter Dropdown ───────────────────────────────────────────────────
+
+function ActionFilterDropdown({
+  actions,
+  selected,
+  getActionColor,
+  onChange,
+}: {
+  actions: string[];
+  selected: string[];
+  getActionColor: (a: string) => string;
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  function toggle(action: string) {
+    const next = selected.includes(action)
+      ? selected.filter(a => a !== action)
+      : [...selected, action];
+    onChange(next);
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-2 px-3 py-[7px] text-sm rounded-lg border-2 font-medium transition-all whitespace-nowrap
+          ${selected.length > 0
+            ? 'bg-primary/10 border-primary text-primary shadow-sm'
+            : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'}`}
+      >
+        <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+        <span>Action Type</span>
+        {selected.length > 0 ? (
+          <span className="bg-primary text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+            {selected.length}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400 font-normal">All</span>
+        )}
+        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-1 left-0 z-50 w-64 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 max-h-72 overflow-y-auto">
+          {actions.length === 0 ? (
+            <p className="px-4 py-3 text-xs text-gray-400 text-center">No actions in logs yet</p>
+          ) : (
+            <>
+              {selected.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onChange([])}
+                  className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 transition-colors font-medium border-b border-gray-100 mb-1"
+                >
+                  Clear selection
+                </button>
+              )}
+              {actions.map(action => (
+                <label
+                  key={action}
+                  className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-primary accent-primary"
+                    checked={selected.includes(action)}
+                    onChange={() => toggle(action)}
+                  />
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getActionColor(action)}`}
+                  >
+                    {action}
+                  </span>
+                </label>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AuditAndStatistics() {
   const { state } = useAuthContext();
   const userId = state.sub;
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-  const [severityFilter, setSeverityFilter] = useState<string>('ALL');
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const {
     logs,
+    filteredLogs,
     stats,
+    filteredStats,
     activityTimeSeries,
     actionDistribution,
     lastSynced,
     isLoading,
     isSyncing,
     refresh,
+    filters,
+    setFilters,
+    resetFilters,
+    isFiltered,
+    uniqueActions,
+    getActionColor,
     getActionHex,
   } = useAudit({ userId, autoRefreshMs: 30000 });
 
+  const displayStats = isFiltered ? filteredStats : stats;
+
   const activityChartConfig = {
-    count: {
-      label: "Events",
-      color: "var(--primary)",
-    },
+    count: { label: 'Events', color: 'var(--primary)' },
   };
 
   const actionChartConfig = actionDistribution.reduce((acc, curr) => {
-    // Slugify action names for safe CSS variable keys
     const key = curr.action.toLowerCase().replace(/[^a-z0-9]/g, '-');
     acc[key] = {
       label: curr.action.charAt(0).toUpperCase() + curr.action.slice(1),
@@ -56,24 +155,15 @@ export default function AuditAndStatistics() {
     return acc;
   }, {} as ChartConfig);
 
-  const filteredLogs = logs.filter(log => {
-      const matchesSearch = searchTerm === '' || 
-        log.actor.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        log.target.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.action.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const category = log.action_category || deriveCategory(log.action);
-      const matchesCategory = categoryFilter === 'ALL' || category === categoryFilter;
-
-      const severity = log.severity || 'INFO';
-      const matchesSeverity = severityFilter === 'ALL' || severity === severityFilter;
-
-      return matchesSearch && matchesCategory && matchesSeverity;
-  });
+  // Count active filter dimensions for badge
+  const activeFilterCount =
+    (filters.searchQuery.trim() ? 1 : 0) +
+    (filters.actionFilter.length > 0 ? 1 : 0) +
+    (filters.dateFrom ? 1 : 0);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {/* ─── Header ─── */}
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
@@ -81,8 +171,12 @@ export default function AuditAndStatistics() {
               <Activity className="w-6 h-6 text-primary animate-pulse" />
             </div>
             <div>
-              <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">Audit & Statistics</h2>
-              <p className="text-gray-500 text-sm font-medium">Monitor system interactions and evaluate overall candidate performance.</p>
+              <h2 className="text-2xl font-black tracking-tight text-gray-900 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-gray-800 to-gray-500">
+                Audit &amp; Statistics
+              </h2>
+              <p className="text-gray-500 text-sm font-medium">
+                Monitor system interactions and evaluate overall candidate performance.
+              </p>
             </div>
           </div>
         </div>
@@ -103,11 +197,12 @@ export default function AuditAndStatistics() {
         </div>
       </div>
 
+      {/* ─── Stats Cards ─── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Total Events', value: stats.total, icon: Activity, color: 'bg-primary/10', iconColor: 'text-primary' },
-          { label: "Today's Events", value: stats.today, icon: Clock, color: 'bg-blue-50', iconColor: 'text-blue-600' },
-          { label: 'Unique Actors', value: stats.actors, icon: Users, color: 'bg-green-50', iconColor: 'text-green-600' },
+          { label: isFiltered ? 'Filtered Events' : 'Total Events', value: displayStats.total, icon: Activity, color: 'bg-primary/10', iconColor: 'text-primary' },
+          { label: "Today's Events", value: displayStats.today, icon: Clock, color: 'bg-blue-50', iconColor: 'text-blue-600' },
+          { label: 'Unique Actors', value: displayStats.actors, icon: Users, color: 'bg-green-50', iconColor: 'text-green-600' },
         ].map((stat, idx) => (
           <Card key={idx} className="shadow-sm border-gray-200">
             <CardContent className="pt-6">
@@ -129,8 +224,9 @@ export default function AuditAndStatistics() {
         ))}
       </div>
 
+      {/* ─── Charts ─── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {/* Activity Over Time Chart */}
+        {/* Activity Over Time */}
         <Card className="shadow-sm border-gray-200/60 overflow-hidden">
           <CardHeader className="pb-2 bg-gray-50/50 border-b border-gray-100/50">
             <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -170,7 +266,7 @@ export default function AuditAndStatistics() {
           </CardContent>
         </Card>
 
-        {/* Action Distribution Chart */}
+        {/* Action Distribution */}
         <Card className="shadow-sm border-gray-200/60 overflow-hidden">
           <CardHeader className="pb-2 bg-gray-50/50 border-b border-gray-100/50">
             <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -203,30 +299,17 @@ export default function AuditAndStatistics() {
                   >
                     <Label
                       content={({ viewBox }) => {
-                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                        if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
                           return (
-                            <text
-                              x={viewBox.cx}
-                              y={viewBox.cy}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                            >
-                              <tspan
-                                x={viewBox.cx}
-                                y={viewBox.cy}
-                                className="fill-foreground text-3xl font-bold"
-                              >
+                            <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                              <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-3xl font-bold">
                                 {stats.total.toLocaleString()}
                               </tspan>
-                              <tspan
-                                x={viewBox.cx}
-                                y={(viewBox.cy || 0) + 24}
-                                className="fill-muted-foreground text-[10px] uppercase tracking-wider font-semibold"
-                              >
+                              <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-muted-foreground text-[10px] uppercase tracking-wider font-semibold">
                                 Total Logs
                               </tspan>
                             </text>
-                          )
+                          );
                         }
                       }}
                     />
@@ -239,6 +322,7 @@ export default function AuditAndStatistics() {
         </Card>
       </div>
 
+      {/* ─── Tabs: Audit Trail + Violations ─── */}
       <Tabs defaultValue="audit" className="space-y-6">
         <TabsList className="bg-white/50 border border-gray-200/60 p-1 w-full sm:w-auto h-auto grid grid-cols-2 rounded-xl">
           <TabsTrigger
@@ -255,56 +339,88 @@ export default function AuditAndStatistics() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="audit" className="space-y-8 focus-visible:outline-none focus-visible:ring-0">
+        <TabsContent value="audit" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
 
-          <Card className="shadow-sm border-gray-200/60 overflow-hidden">
-            <CardHeader className="pb-3 bg-gray-50/50 border-b border-gray-100/50 space-y-4">
-              <div className="flex justify-between items-center w-full">
-                <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <History className="w-4 h-4 text-indigo-500" aria-hidden />
-                  Audit Trail
-                  <span className="ml-2 text-[10px] font-semibold text-gray-400 uppercase tracking-widest bg-gray-100/50 px-2 py-1 rounded">Auto-refreshes 30s</span>
-                </CardTitle>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                  <Input 
-                    type="text" 
-                    placeholder="Search action, actor, target or details..." 
-                    className="pl-9 bg-white text-sm focus-visible:ring-primary/20"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+          {/* ─── Filter Bar ─── */}
+          <Card className="shadow-sm border-gray-200/60 relative z-20">
+            <CardContent className="py-3 px-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center flex-wrap">
+
+                {/* Search */}
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by actor, action, or details…"
+                    value={filters.searchQuery}
+                    onChange={e => setFilters({ searchQuery: e.target.value })}
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                   />
                 </div>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[180px] bg-white text-sm focus:ring-primary/20">
-                     <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Categories</SelectItem>
-                    <SelectItem value="AI_GEMINI">Gemini AI</SelectItem>
-                    <SelectItem value="AI_HUGGINGFACE">HuggingFace AI</SelectItem>
-                    <SelectItem value="EMAIL">Email</SelectItem>
-                    <SelectItem value="HIRING">Hiring Decisions</SelectItem>
-                    <SelectItem value="CANDIDATE">Candidate Flow</SelectItem>
-                    <SelectItem value="VIOLATION">Violations</SelectItem>
-                    <SelectItem value="SECURITY">Security</SelectItem>
-                    <SelectItem value="SYSTEM">System</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-[140px] bg-white text-sm focus:ring-primary/20">
-                     <SelectValue placeholder="All Severities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Severities</SelectItem>
-                    <SelectItem value="INFO">Info</SelectItem>
-                    <SelectItem value="WARN">Warning</SelectItem>
-                    <SelectItem value="CRITICAL">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
+
+                {/* Action Type Dropdown */}
+                <ActionFilterDropdown
+                  actions={uniqueActions}
+                  selected={filters.actionFilter}
+                  getActionColor={getActionColor}
+                  onChange={v => setFilters({ actionFilter: v })}
+                />
+
+                {/* Date From */}
+                <div className="relative">
+                  <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                  <input
+                    type="date"
+                    title="From date"
+                    value={filters.dateFrom}
+                    onChange={e => setFilters({ dateFrom: e.target.value })}
+                    className="pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-700
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
+                  />
+                </div>
+
+
+
+                {/* Reset */}
+                {isFiltered && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-red-100 bg-red-50 text-red-600
+                      hover:bg-red-100 transition-all font-medium whitespace-nowrap"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Reset
+                    {activeFilterCount > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
+
+              {/* Active filter summary banner */}
+              {isFiltered && !isLoading && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-primary/80 font-medium">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                  Showing {filteredLogs.length} of {logs.length} events
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ─── Audit Table ─── */}
+          <Card className="shadow-sm border-gray-200/60 overflow-hidden">
+            <CardHeader className="pb-3 bg-gray-50/50 border-b border-gray-100/50">
+              <CardTitle className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <History className="w-4 h-4 text-indigo-500" aria-hidden />
+                Audit Trail
+                <span className="ml-auto text-[10px] font-semibold text-gray-400 uppercase tracking-widest bg-gray-100/50 px-2 py-1 rounded">
+                  Auto-refreshes 30s
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
@@ -324,14 +440,29 @@ export default function AuditAndStatistics() {
                     ))}
                   </div>
                 </div>
-              ) : logs.length === 0 ? (
+              ) : filteredLogs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                   <AlertCircle className="w-8 h-8 mb-3" aria-hidden />
-                  <p className="text-sm">No audit logs recorded yet.</p>
-                  <p className="text-xs text-gray-400 mt-1">Actions will appear here as they happen.</p>
+                  {isFiltered ? (
+                    <>
+                      <p className="text-sm">No events match your filters.</p>
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="mt-3 text-xs text-primary underline-offset-2 hover:underline"
+                      >
+                        Clear filters
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm">No audit logs recorded yet.</p>
+                      <p className="text-xs text-gray-400 mt-1">Actions will appear here as they happen.</p>
+                    </>
+                  )}
                 </div>
               ) : (
-                <div className="overflow-auto max-h-[500px]">
+                <div className="overflow-auto max-h-[520px]">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50/80 text-gray-500 font-semibold border-b border-gray-100 sticky top-0 backdrop-blur-sm z-10">
                       <tr>
@@ -344,13 +475,10 @@ export default function AuditAndStatistics() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {filteredLogs.map((log) => (
-                        <tr 
-                          key={log.id} 
-                          className="hover:bg-gray-50/50 transition-colors cursor-pointer"
-                          onClick={() => setSelectedLog(log)}
-                        >
+                        <tr key={log.id} className="hover:bg-gray-50/50 transition-colors group">
                           <td className="px-6 py-3 text-gray-400 whitespace-nowrap text-xs">
-                            {new Date(log.created_at).toLocaleString()}
+                            <span className="block">{new Date(log.created_at).toLocaleDateString()}</span>
+                            <span className="block text-[11px] text-gray-300">{new Date(log.created_at).toLocaleTimeString()}</span>
                           </td>
                           <td className="px-6 py-4">
                             {(() => {
@@ -361,7 +489,7 @@ export default function AuditAndStatistics() {
                                   style={{
                                     backgroundColor: `${fill}15`,
                                     color: fill,
-                                    borderColor: `${fill}30`
+                                    borderColor: `${fill}30`,
                                   }}
                                 >
                                   {log.action}
@@ -371,7 +499,9 @@ export default function AuditAndStatistics() {
                           </td>
                           <td className="px-6 py-3 text-gray-700 font-medium text-xs">{log.actor}</td>
                           <td className="px-6 py-3 text-gray-600 text-xs font-mono">{log.target}</td>
-                          <td className="px-6 py-3 text-gray-500 text-xs max-w-[200px] truncate">{log.details}</td>
+                          <td className="px-6 py-3 text-gray-500 text-xs max-w-[220px] truncate" title={log.details}>
+                            {log.details}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -380,63 +510,6 @@ export default function AuditAndStatistics() {
               )}
             </CardContent>
           </Card>
-          
-          <Dialog open={!!selectedLog} onOpenChange={(open: boolean) => !open && setSelectedLog(null)}>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-lg">
-                   <FileText className="w-5 h-5 text-indigo-500" /> 
-                   Audit Record Details
-                </DialogTitle>
-                <DialogDescription asChild>
-                  <div className="text-xs font-mono text-gray-500 break-all pt-2 select-text">
-                    ID: {selectedLog?.id}
-                  </div>
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 text-sm text-gray-700 mt-2">
-                 <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 border border-gray-100">
-                   <div>
-                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Action</span>
-                     <span className="font-medium text-gray-900">{selectedLog?.action}</span>
-                   </div>
-                   <div>
-                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Date & Time</span>
-                     <span className="text-gray-900">{selectedLog?.created_at ? new Date(selectedLog.created_at).toLocaleString() : ''}</span>
-                   </div>
-                   <div>
-                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Actor (User/System)</span>
-                     <span className="text-gray-900 break-all">{selectedLog?.actor}</span>
-                   </div>
-                   <div>
-                     <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Target Entity</span>
-                     <span className="text-gray-900 break-all">{selectedLog?.target}</span>
-                   </div>
-                 </div>
-                 
-                 <div>
-                   <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Summary</span>
-                   <p className="text-gray-800 leading-relaxed bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
-                     {selectedLog?.details}
-                   </p>
-                 </div>
-                 
-                 {selectedLog?.metadata && (
-                    <div className="mt-6">
-                       <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2 flex flex-row items-center gap-2">
-                         <Layers className="w-3.5 h-3.5" /> Extended Metadata (AI / Request Data)
-                       </span>
-                       <pre className="bg-slate-900 border border-slate-800 p-4 rounded-xl overflow-x-auto text-[11px] text-emerald-400 font-mono shadow-inner custom-scrollbar">
-                          {typeof selectedLog.metadata === 'string' 
-                            ? selectedLog.metadata 
-                            : JSON.stringify(selectedLog.metadata, null, 2)}
-                       </pre>
-                    </div>
-                 )}
-              </div>
-            </DialogContent>
-          </Dialog>
-
         </TabsContent>
 
         <TabsContent value="violations" className="focus-visible:outline-none focus-visible:ring-0">

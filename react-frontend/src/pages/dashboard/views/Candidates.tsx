@@ -2,11 +2,11 @@
  * Candidates View
  *
  * Dashboard view for managing the hiring pipeline: list candidates, filter by status/activity,
- * view details (scores, context, timeline), and accept/reject with configurable threshold.
+ * view details (scores, context, timeline), and accept/reject.
  *
  * Structure:
  * - useCandidates: data loading, filters, selection, and decision actions
- * - CandidateFilters: status dropdown, seen/unseen toggle, threshold input
+ * - CandidateFilters: status dropdown, seen/unseen toggle, weightage adjustment
  * - CandidateListTable: scrollable table with loading/empty states
  * - CandidateDetailPanel: slide-in panel with scores, context, timeline, actions
  */
@@ -30,20 +30,12 @@ export default function CandidateManager() {
   const {
     filteredCandidates,
     selectedCandidate,
-    threshold,
     isLoading,
     isProcessing,
     statusFilter,
     setStatusFilter,
     activityFilter,
     setActivityFilter,
-    setThreshold,
-    cvWeight,
-    setCvWeight,
-    skillsWeight,
-    setSkillsWeight,
-    interviewWeight,
-    setInterviewWeight,
     setSelectedCandidate,
     handleViewDetails,
     handleAcceptCandidate,
@@ -134,14 +126,6 @@ export default function CandidateManager() {
             onStatusChange={setStatusFilter}
             activityFilter={activityFilter}
             onActivityChange={setActivityFilter}
-            threshold={threshold}
-            onThresholdChange={setThreshold}
-            cvWeight={cvWeight}
-            onCvWeightChange={setCvWeight}
-            skillsWeight={skillsWeight}
-            onSkillsWeightChange={setSkillsWeight}
-            interviewWeight={interviewWeight}
-            onInterviewWeightChange={setInterviewWeight}
           />
         </div>
 
@@ -156,7 +140,6 @@ export default function CandidateManager() {
           <div className="flex-1 overflow-hidden">
             <CandidatePipeline
               candidates={filteredCandidates}
-              threshold={threshold}
               selectedId={selectedCandidate?.candidateId ?? null}
               onSelectCandidate={handleViewDetails}
             />
@@ -168,7 +151,6 @@ export default function CandidateManager() {
       {selectedCandidate && (
         <CandidateDetailPanel
           candidate={selectedCandidate}
-          threshold={threshold}
           isProcessing={isProcessing}
           onClose={() => setSelectedCandidate(null)}
           onApplyDecision={handleApplyDecision}

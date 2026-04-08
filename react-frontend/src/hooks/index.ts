@@ -24,4 +24,4 @@ export { useEvaluationTemplates } from './useEvaluationTemplates';
 export type { UseEvaluationTemplatesOptions, UseEvaluationTemplatesResult } from './useEvaluationTemplates';
 
 export { useAudit } from './useAudit';
-export type { UseAuditOptions, UseAuditResult, AuditStats } from './useAudit';
+export type { UseAuditOptions, UseAuditResult, AuditStats, AuditFilters, ActivityPoint, ActionDistribution } from './useAudit';

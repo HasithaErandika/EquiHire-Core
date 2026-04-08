@@ -69,11 +69,23 @@ public const string AUTO_ZERO_FEEDBACK     = "Answer was deemed irrelevant to th
 public const string GRADING_FAILED_FEEDBACK = "AI automated grading failed format requirements. Flagged for manual review.";
 
 // Audit Log Action Types
-public const string AUDIT_CREATE_JOB       = "Create Job";
-public const string AUDIT_SEND_INVITATION  = "Send Invitation";
-public const string AUDIT_SUBMIT_ASSESSMENT = "Submit Assessment";
-public const string AUDIT_CREATE_TEMPLATE  = "Create Evaluation Template";
-public const string AUDIT_FLAG_LEGACY      = "Lockdown Violation (Legacy)";
-public const string AUDIT_CANDIDATE_ACCEPTED = "Candidate Accepted";
-public const string AUDIT_CANDIDATE_REJECTED = "Candidate Rejected";
+public const string AUDIT_CREATE_JOB            = "Create Job";
+public const string AUDIT_SEND_INVITATION       = "Send Invitation";
+public const string AUDIT_SUBMIT_ASSESSMENT     = "Submit Assessment";
+public const string AUDIT_CREATE_TEMPLATE       = "Create Evaluation Template";
+public const string AUDIT_FLAG_LEGACY           = "Lockdown Violation (Legacy)";
+public const string AUDIT_CANDIDATE_ACCEPTED    = "Candidate Accepted";
+public const string AUDIT_CANDIDATE_REJECTED    = "Candidate Rejected";
+public const string AUDIT_CANDIDATE_STATUS_CHANGE = "Candidate Status Changed";
+public const string AUDIT_TRANSCRIPT_GENERATED = "Transcript Viewed";
+public const string AUDIT_CV_ACCESSED          = "CV Accessed";
+public const string AUDIT_ASSESSMENT_UPDATED   = "Assessment Updated";
+public const string AUDIT_JOB_UPDATED          = "Job Updated";
+public const string AUDIT_JOB_DELETED          = "Job Deleted";
+public const string AUDIT_TEMPLATE_UPDATED     = "Template Updated";
+public const string AUDIT_TEMPLATE_DELETED     = "Template Deleted";
+public const string AUDIT_ORGANIZATION_UPDATED = "Organization Updated";
+public const string AUDIT_INVITATION_ACCEPTED  = "Invitation Accepted";
+public const string AUDIT_CV_UPLOADED          = "CV Uploaded";
+public const string AUDIT_SESSION_STARTED      = "Session Started";
 

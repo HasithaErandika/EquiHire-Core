@@ -96,6 +96,14 @@ export interface TranscriptItem {
 export interface TranscriptResponse {
   candidateId: string;
   candidateName: string;
+  candidateEmail: string;
+  jobTitle: string;
+  appliedDate: string;
+  overallScore: number;
+  cvScore: number;
+  skillsScore: number;
+  interviewScore: number;
+  summaryFeedback: string;
   transcript: TranscriptItem[];
 }
 

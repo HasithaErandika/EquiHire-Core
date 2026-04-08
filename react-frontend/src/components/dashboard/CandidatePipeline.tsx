@@ -4,7 +4,6 @@ import type { ExtendedCandidate } from '@/types';
 
 interface CandidatePipelineProps {
   candidates: ExtendedCandidate[];
-  threshold: number;
   onSelectCandidate: (candidate: ExtendedCandidate) => void;
   selectedId: string | null;
 }
@@ -15,21 +14,19 @@ const STAGES = [
   { id: 'rejected', label: 'Rejected', color: 'bg-red-500' },
 ];
 
-export function CandidatePipeline({ candidates, threshold, onSelectCandidate, selectedId }: CandidatePipelineProps) {
+export function CandidatePipeline({ candidates, onSelectCandidate, selectedId }: CandidatePipelineProps) {
   return (
     <div className="flex gap-4 h-full overflow-x-auto pb-4 scrollbar-hide">
       {STAGES.map((stage) => {
         const stageCandidates = candidates.filter((c) => {
           if (stage.id === 'pending') {
-            return ['pending', 'applied', 'scheduled', 'screening'].includes(c.status) && (!c.score || c.score === 0);
+            return ['pending', 'applied', 'scheduled', 'screening'].includes(c.status);
           }
           if (stage.id === 'accepted') {
-            return c.status === 'accepted' || c.status === 'shortlisted' ||
-              (['pending', 'applied', 'scheduled', 'screening'].includes(c.status) && c.score >= threshold);
+            return c.status === 'accepted' || c.status === 'shortlisted';
           }
           if (stage.id === 'rejected') {
-            return c.status === 'rejected' ||
-              (['pending', 'applied', 'scheduled', 'screening'].includes(c.status) && c.score > 0 && c.score < threshold);
+            return c.status === 'rejected';
           }
           return false;
         });
@@ -95,15 +92,6 @@ export function CandidatePipeline({ candidates, threshold, onSelectCandidate, se
                           {tech}
                         </span>
                       ))}
-                      {/* Auto-pass status markers */}
-                      {['pending', 'applied', 'scheduled', 'screening'].includes(candidate.status) && candidate.score > 0 && (
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border 
-                             ${candidate.score >= threshold
-                            ? 'text-green-600 bg-green-50 border-green-100'
-                            : 'text-orange-600 bg-orange-50 border-orange-100'}`}>
-                          {candidate.score >= threshold ? 'Qualified' : 'Below Threshold'}
-                        </span>
-                      )}
                     </div>
 
                     <div className="pt-2 border-t border-gray-50 flex justify-between items-center text-[10px] text-gray-400 font-medium">

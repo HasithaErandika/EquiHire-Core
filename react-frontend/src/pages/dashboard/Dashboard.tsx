@@ -9,7 +9,7 @@ import { useOrganization } from '@/hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EquiHireLogo, DashboardIcon, SessionIcon, IntegrationIcon } from '@/components/ui/Icons';
-import { LogOut, Settings, Check, Building2, ChevronDown, Activity, FileText } from 'lucide-react';
+import { LogOut, Bell, Settings, Check, Building2, ChevronDown, Activity, FileText } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +42,6 @@ import JobsManager from './views/Jobs';
 import QuestionsManager from './views/Questions';
 import AuditAndStatistics from './views/Audit';
 import MarkingCriteria from './views/MarkingCriteria';
-import { NotificationPanel } from '@/components/dashboard/NotificationPanel';
 
 export type DashboardTab = 'scheduler' | 'candidates' | 'integrations' | 'jobs' | 'questions' | 'audit' | 'marking';
 
@@ -155,9 +154,9 @@ export default function Dashboard() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            
-            {organization && <NotificationPanel orgId={organization.id} />}
-
+            <Button variant="ghost" size="icon" className="text-gray-500" aria-label="Notifications">
+              <Bell className="h-5 w-5" />
+            </Button>
             <Button
               variant="ghost"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"

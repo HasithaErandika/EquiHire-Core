@@ -104,7 +104,7 @@ function findQuestion(string questionId,
 }
 
 function runHfGate(string redactedAns, string sessionId,
-                   string questionId) returns [boolean, float?, boolean] {
+                   string questionId) returns [boolean, float?] {
     huggingface:ZeroShotClassificationRequest hfPayload = {
         inputs: redactedAns,
         parameters: {candidateLabels: [constants:HF_LABEL_RELEVANT, constants:HF_LABEL_IRRELEVANT]}
@@ -115,15 +115,15 @@ function runHfGate(string redactedAns, string sessionId,
     if res is error {
         log:printWarn("HF gate 503 fallback — proceeding to Gemini",
                       sessionId = sessionId, questionId = questionId);
-        return [true, (), false]; // [passed, score, wasChecked]
+        return [true, ()];
     }
     foreach var item in res {
         if item.label == constants:HF_LABEL_RELEVANT {
             float score = <float>(item.score ?: 0.0);
-            return [score >= constants:HF_RELEVANCE_THRESHOLD, score, true];
+            return [score >= constants:HF_RELEVANCE_THRESHOLD, score];
         }
     }
-    return [false, 0.0, true];
+    return [false, 0.0];
 }
 
 function gradeOneAnswer(string sessionId, string candidateId,
@@ -140,15 +140,13 @@ function gradeOneAnswer(string sessionId, string candidateId,
 
     string redactedAns = utils:maskPii(ans.answerText, piiMap);
 
-    [boolean, float?, boolean] [passed, hfScore, wasChecked] = runHfGate(redactedAns, sessionId, ans.questionId);
+    [boolean, float?] [passed, hfScore] = runHfGate(redactedAns, sessionId, ans.questionId);
 
-    if wasChecked {
-        string? vaultId = rawVaultIds[ans.questionId];
-        if vaultId is string {
-            error? hfErr = repositories:markRawAnswerHfChecked(vaultId);
-            if hfErr is error {
-                log:printError("markRawAnswerHfChecked failed", 'error = hfErr, vaultId = vaultId);
-            }
+    string? vaultId = rawVaultIds[ans.questionId];
+    if vaultId is string {
+        error? hfErr = repositories:markRawAnswerHfChecked(vaultId);
+        if hfErr is error {
+            log:printError("markRawAnswerHfChecked failed", 'error = hfErr, vaultId = vaultId);
         }
     }
 
@@ -180,15 +178,6 @@ function summarizeViolations(types:CheatEventItem[] events) returns string {
 function buildGradingResult(string sessionId, string candidateId, string questionId,
                              string redactedAns, types:QuestionItem q, string expLevel,
                              boolean hfPassed, float? hfScore, string violationsSummary) returns types:GradingResult {
-    if !hfPassed {
-        return {
-            sessionId: sessionId, candidateId: candidateId, questionId: questionId,
-            redactedAnswer: redactedAns, score: constants:AUTO_ZERO_SCORE,
-            feedback: constants:AUTO_ZERO_FEEDBACK,
-            hfGatePassed: false, hfRelevanceScore: hfScore,
-            geminiModel: constants:GEMINI_MODEL, gradingAttempt: 0, wasFlagged: false
-        };
-    }
     return callGeminiGrader(sessionId, candidateId, questionId, redactedAns, q, expLevel, hfPassed, hfScore, violationsSummary);
 }
 

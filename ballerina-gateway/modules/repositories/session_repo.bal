@@ -16,7 +16,7 @@ public function createExamSession(string candidateId, string invitationId,
     // Check for an existing active session
     string checkPath = string `/rest/v1/exam_sessions?candidate_id=eq.${candidateId}&job_id=eq.${jobId}&select=id&order=created_at.desc&limit=1`;
     http:Response checkResp = check clients:supabaseHttpClient->get(
-        checkPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
+        checkPath, headers = clients:getSupabaseHeaders(), targetType = http:Response);
     if checkResp.statusCode < 300 {
         json[] existing = <json[]>check checkResp.getJsonPayload();
         if existing.length() > 0 {
