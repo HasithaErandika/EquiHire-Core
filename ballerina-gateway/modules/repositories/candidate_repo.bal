@@ -229,34 +229,48 @@ public function getCandidateDisplayName(string candidateId) returns string|error
 
 public function getCandidateName(string candidateId) returns record {|string candidateName; string candidateEmail; string jobTitle;|}|error {
     string path = string `/rest/v1/anonymous_profiles?candidate_id=eq.${candidateId}&select=invitation_id,job_id`;
-    http:Response resp = check clients:supabaseHttpClient->get(
-        path, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
-    if resp.statusCode >= 300 { return error("getCandidateName: profile not found for " + candidateId); }
-    json[] profiles = <json[]>check resp.getJsonPayload();
-    if profiles.length() == 0 { return error("Candidate not found: " + candidateId); }
-    map<json> profile = <map<json>>profiles[0];
-    string invId = profile["invitation_id"] is () ? "" : profile["invitation_id"].toString();
-    string jobId = profile["job_id"] is () ? "" : profile["job_id"].toString();
+    http:Response response = check clients:supabaseHttpClient->get(
+        path, headers = clients:getSupabaseHeaders(), targetType = http:Response);
+    if response.statusCode >= 300 {
+        return error("getCandidateName: fetch profile failed");
+    }
+    json[] profiles = <json[]>check response.getJsonPayload();
+    if profiles.length() == 0 { return error("Profile not found"); }
+    map<json> prof = <map<json>>profiles[0];
+    string invId = prof["invitation_id"] is () ? "" : prof["invitation_id"].toString();
+    string jobId = prof["job_id"] is () ? "" : prof["job_id"].toString();
 
     string candidateEmail = "";
     string nameFallback = string `Candidate #${candidateId.substring(0, 8)}`;
     string candidateNameVal = nameFallback;
     string jobTitleVal = "the applied role";
 
+    // Fallback from PII Map
+    map<json> piiMap = check getPiiRedactionMap(candidateId);
+    foreach [string, json] [original, redacted] in piiMap.entries() {
+        string r = redacted.toString();
+        if r == "[REDACTED_NAME]" && candidateNameVal.startsWith("Candidate #") {
+            candidateNameVal = original;
+        } else if r == "[REDACTED_EMAIL]" && candidateEmail == "" {
+            candidateEmail = original;
+        }
+    }
+
     if invId != "" {
-        string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name,candidate_email`;
+        string invPath = string `/rest/v1/interview_invitations?id=eq.${invId}&select=candidate_name,candidate_email,job_title`;
         http:Response iResp = check clients:supabaseHttpClient->get(
             invPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);
         if iResp.statusCode < 300 {
             json[] invs = <json[]>check iResp.getJsonPayload();
             if invs.length() > 0 {
                 map<json> inv = <map<json>>invs[0];
-                candidateNameVal = inv["candidate_name"] is () ? nameFallback : inv["candidate_name"].toString();
-                candidateEmail = inv["candidate_email"] is () ? "" : inv["candidate_email"].toString();
+                candidateNameVal = inv["candidate_name"] is () ? candidateNameVal : inv["candidate_name"].toString();
+                candidateEmail = inv["candidate_email"] is () ? candidateEmail : inv["candidate_email"].toString();
+                if inv["job_title"] is string { jobTitleVal = inv["job_title"].toString(); }
             }
         }
     }
-    if jobId != "" {
+    if jobId != "" && jobTitleVal == "the applied role" {
         string jobPath = string `/rest/v1/jobs?id=eq.${jobId}&select=title`;
         http:Response jResp = check clients:supabaseHttpClient->get(
             jobPath, headers = clients:getSupabaseServiceHeaders(), targetType = http:Response);

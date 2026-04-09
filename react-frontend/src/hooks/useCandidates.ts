@@ -153,13 +153,15 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
       setIsProcessing(true);
       try {
         // Backend handles acceptance email in the decide endpoint
-        await API.decideCandidate(candidateId, 'accepted');
+        const res = await API.decideCandidate(candidateId, 'accepted');
 
         // Refresh candidates list and selected candidate details
         await fetchCandidates(orgId);
         const updatedCandidates = await API.getCandidates(orgId) as unknown as ExtendedCandidate[];
         const updated = updatedCandidates.find(c => c.candidateId === candidateId);
         if (updated) setSelectedCandidate(updated);
+
+        return res as any;
       } catch (error) {
         console.error('Accept failed:', error);
         throw error;
@@ -175,13 +177,15 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
       setIsProcessing(true);
       try {
         // Backend handles rejection email with scores in the decide endpoint
-        await API.decideCandidate(candidateId, 'rejected');
+        const res = await API.decideCandidate(candidateId, 'rejected');
 
         // Refresh candidates list and selected candidate details
         await fetchCandidates(orgId);
         const updatedCandidates = await API.getCandidates(orgId) as unknown as ExtendedCandidate[];
         const updated = updatedCandidates.find(c => c.candidateId === candidateId);
         if (updated) setSelectedCandidate(updated);
+
+        return res as any;
       } catch (error) {
         console.error('Reject failed:', error);
         throw error;

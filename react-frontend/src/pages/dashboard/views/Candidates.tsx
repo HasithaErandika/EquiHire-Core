@@ -53,16 +53,21 @@ export default function CandidateManager() {
   // Wrapper function to handle accept/reject decisions with user feedback
   const handleApplyDecision = async (candidateId: string, decision: 'accepted' | 'rejected') => {
     try {
+      let result: any;
       if (decision === 'accepted') {
-        await handleAcceptCandidate(candidateId);
-        showToast('success', 'Candidate accepted! Acceptance email sent.');
+        result = await handleAcceptCandidate(candidateId);
       } else {
-        await handleRejectCandidate(candidateId);
-        showToast('success', 'Candidate rejected. Rejection email sent.');
+        result = await handleRejectCandidate(candidateId);
+      }
+
+      if (result?.emailSent) {
+        showToast('success', `Candidate ${decision}! Decision email has been sent successfully.`);
+      } else {
+        showToast('success', `Candidate ${decision}, but the contact email was unavailable or failed to send.`);
       }
     } catch (error) {
       console.error(`Failed to ${decision} candidate:`, error);
-      showToast('error', `Failed to ${decision} candidate. Please try again.`);
+      showToast('error', `Failed to ${decision} candidate. Please check your connection.`);
     }
   };
 

@@ -378,13 +378,13 @@ service /api on apiListener {
             if contact.candidateEmail == "" {
                  log:printWarn("Candidate email is empty, skipping email", candidateId = candidateId);
             } else if pass {
-                string acceptanceMsg = "<p>We are pleased to inform you that you have successfully passed the technical evaluation for <strong>"
-                        + contact.jobTitle + "</strong> and you are hired!</p>"
-                        + "<p><strong>Your Evaluation Results:</strong><br>"
-                        + "&#8226; CV/Resume Score: " + eval.cvScore.toString() + "/100<br>"
-                        + "&#8226; Skills Assessment: " + eval.skillsScore.toString() + "/100<br>"
-                        + "&#8226; Technical Interview: " + eval.interviewScore.toString() + "/100<br>"
-                        + "&#8226; Overall Score: " + eval.overallScore.toString() + "/100</p>"
+                string acceptanceMsg = string `<p>We are pleased to inform you that you have successfully passed the technical evaluation for <strong>${contact.jobTitle}</strong>!</p>`
+                        + string `<p><strong>Performance Snapshot:</strong><br>`
+                        + string `&#8226; CV/Resume Match: ${eval.cvScore.toString()}/100<br>`
+                        + string `&#8226; Skills Assessment: ${eval.skillsScore.toString()}/100<br>`
+                        + string `&#8226; Technical Interview: ${eval.interviewScore.toString()}/100</p>`
+                        + string `<p><strong>Feedback from our Evaluation Team:</strong><br>`
+                        + string `<em>${eval.summaryFeedback}</em></p>`
                         + "<p>Our recruitment team will be in touch shortly with the next steps.</p>";
                 error? emailErr = services:sendAcceptanceEmail(
                         contact.candidateEmail, contact.candidateName, contact.jobTitle, acceptanceMsg);
@@ -395,15 +395,17 @@ service /api on apiListener {
                     log:printInfo("Acceptance email sent", candidateId = candidateId, toEmail = contact.candidateEmail);
                 }
             } else {
-                string rejectionMsg = "<p>Thank you for your application and participation in our interview process. "
-                        + "While your profile shows promise, we have decided to move forward with other candidates at this time.</p>"
-                        + "<p><strong>Your Evaluation Results:</strong><br>"
-                        + "&#8226; CV/Resume Score: " + eval.cvScore.toString() + "/100<br>"
-                        + "&#8226; Skills Assessment: " + eval.skillsScore.toString() + "/100<br>"
-                        + "&#8226; Technical Interview: " + eval.interviewScore.toString() + "/100<br>"
-                        + "&#8226; Overall Score: " + eval.overallScore.toString() + "/100</p>"
-                        + "<p>We appreciate your time and effort, and we encourage you to apply for future opportunities. "
-                        + "Best of luck with your career journey!</p>";
+                string rejectionMsg = "<p>Thank you for your interest and for participating in our evaluation process. "
+                        + "While your technical profile shows promise, we have decided not to move forward at this stage.</p>"
+                        + "<p><strong>Your Technical Evaluation Summary:</strong></p>"
+                        + string `<div style="padding: 15px; background: #f9f9f9; border-left: 4px solid #e5e7eb; margin: 15px 0;">
+                            <p style="margin: 0; color: #4b5563; font-style: italic;">"${eval.summaryFeedback}"</p>
+                          </div>`
+                        + string `<p><strong>Recorded Scores:</strong><br>`
+                        + string `&#8226; CV Match: ${eval.cvScore.toString()}/100<br>`
+                        + string `&#8226; Skills Assessment: ${eval.skillsScore.toString()}/100<br>`
+                        + string `&#8226; Interview Performance: ${eval.interviewScore.toString()}/100</p>`
+                        + "<p>We encourage you to use this feedback for your future growth and hope to see your application again for other suitable roles.</p>";
                 error? emailErr = services:sendRejectionEmail(
                         contact.candidateEmail, contact.candidateName, contact.jobTitle, rejectionMsg);
                 if emailErr is error {
