@@ -1,64 +1,79 @@
 # Getting Started with EquiHire
 
-This guide provides the necessary steps to configure and execute the EquiHire platform locally.
+Welcome to the EquiHire setup guide. Follow these instructions to configure and execute the EquiHire platform in your local development environment.
 
 ---
 
-## Prerequisites
+## 🛠 Prerequisites
 
-Before beginning the installation, ensure you have the following tools and accounts configured:
+Ensure your system meets the following requirements before proceeding with the installation.
 
-*   **Runtime Environments:**
-    *   Ballerina Swan Lake (Update 8 or higher)
-    *   Node.js (LTS version)
-*   **External Managed Services:**
-    *   Supabase Account (For PostgreSQL persistence)
-    *   Google Gemini API Key (For CV parsing and semantic evaluation)
-    *   HuggingFace API Token (For response relevance gating)
-    *   Cloudflare R2 Account (For secure object storage)
-    *   WSO2 Asgardeo Account (For identity and access management)
+### 💻 Runtime Environments
+| Tool | Version | Purpose |
+| :--- | :--- | :--- |
+| **Ballerina** | Swan Lake (Update 8 or higher) | Backend microservices & gateway |
+| **Node.js** | 18.x or higher (LTS recommended) | Frontend development & tooling |
+| **npm** | 9.x or higher | Dependency management |
+
+### ☁️ Managed Services
+EquiHire integrates several cloud services. You will need active accounts for the following:
+*   **Supabase:** PostgreSQL database and authentication.
+*   **Google Gemini:** AI-driven CV parsing and evaluations.
+*   **HuggingFace:** Inference APIs for response gating.
+*   **Cloudflare R2:** Secure S3-compatible object storage for resumes.
+*   **WSO2 Asgardeo:** Identity and Access Management (OIDC).
+*   **Brevo:** SMTP service for automated email notifications.
 
 ---
 
-## Installation and Configuration
+## 🚀 Installation & Configuration
 
 ### 1. Repository Setup
-Clone the repository to your local environment:
+Clone the EquiHire repository to your local machine:
 ```bash
-git clone https://github.com/YourUsername/EquiHire-Core.git
+git clone https://github.com/DilnakaAbhishek/EquiHire-Core.git
 cd EquiHire-Core
 ```
 
 ### 2. Database Initialization
-EquiHire uses Supabase for data persistence. To initialize the database:
-1.  Access your Supabase SQL Editor.
-2.  Execute the scripts provided in `supabase_schema.sql` to create the required tables and relational constraints.
+EquiHire utilizes Supabase for structured data persistence.
+1.  Navigate to your [Supabase Dashboard](https://supabase.com/dashboard).
+2.  Create a new project.
+3.  Open the **SQL Editor** in Supabase.
+4.  Copy the contents of `supabase_schema.sql` (found in the root directory) and execute it to initialize the database schema.
 
-### 3. Backend Implementation (Ballerina)
+### 3. Backend Gateway Configuration (Ballerina)
+The backend gateway handles API routing and core logic.
 1.  Navigate to the gateway directory:
     ```bash
     cd ballerina-gateway
     ```
-2.  Initialize the configuration:
+2.  Initialize the configuration file:
     ```bash
     cp Config.toml.example Config.toml
     ```
-3.  **Important:** Update `Config.toml` with your specific API credentials and database connection details. Note that the R2 `accessKeyId` is a unique identifier, not a URL.
-4.  Execute the service:
+3.  Open `Config.toml` and populate it with your service credentials.
+
+> [!IMPORTANT]
+> The Cloudflare R2 `accessKeyId` is a literal string identifier, not a URL. Ensure all AI API keys are correctly scoped.
+
+4.  Start the Ballerina service:
     ```bash
     bal run
     ```
 
-### 4. Frontend Implementation (React)
+### 4. Frontend Application Setup (React)
+The frontend is built with React and Vite.
 1.  Navigate to the frontend directory:
     ```bash
-    cd react-frontend
+    cd ../react-frontend
     ```
-2.  Initialize environment variables:
+2.  Initialize the environment configuration:
     ```bash
     cp .env.example .env
     ```
-3.  Install dependencies and start the development server:
+3.  Update `.env` with your Asgardeo and API URL configuration.
+4.  Install dependencies and launch the development server:
     ```bash
     npm install
     npm run dev
@@ -66,6 +81,18 @@ EquiHire uses Supabase for data persistence. To initialize the database:
 
 ---
 
-## Support and Documentation
-For detailed architecture diagrams and API specifications, refer to the [Introduction](./introduction.md) and [API Reference](./api-endpoints.md) documents.
+## 🔍 Verification
+Once both the backend and frontend are running:
+*   Frontend: [http://localhost:5173](http://localhost:5173)
+*   Backend Gateway: [http://localhost:9092](http://localhost:9092)
+
+Attempt a test login using an Asgardeo-registered account to verify the full authentication flow.
+
+---
+
+## 📚 Related Documentation
+*   [Introduction](./introduction.md) - Project overview and core concepts.
+*   [API Reference](./api-endpoints.md) - Detailed endpoint documentation.
+*   [Frontend Design](./frontend-design.md) - UI/UX standards and architecture.
+
 
