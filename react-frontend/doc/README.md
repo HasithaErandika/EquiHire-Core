@@ -1,15 +1,22 @@
-# EquiHire Documentation
+# EquiHire Frontend Documentation
 
-Welcome to the EquiHire Core documentation. This folder contains detailed information about the system architecture, API reference, and specific workflows.
+This directory provides documentation specific to the EquiHire frontend application.
 
-## Table of Contents
+---
 
-1.  **[System Overview/Introduction](./introduction.md)**: Detailed problem, solution, **Architecture Diagram**, and roadmap.
-2.  **[Getting Started](./getting-started.md)**: Installation and setup guide.
-3.  **[Identity Lifecycle](./identity-lifecycle.md)**: Detailed flow of Authentication, Sign-up, and Magic Link Invitations using Asgardeo.
-4.  **[API Reference](./api-endpoints.md)**: List of available HTTP endpoints.
+## Documentation Categories
 
-## Project Structure
+1.  **[Frontend Design Guidelines](./frontend-design.md)**
+    Overview of the UI/UX principles, design system tokens, and component architecture used in the project.
 
--   `ballerina-gateway`: The core orchestrator.
--   `react-frontend`: The dashboard for Recruiters.
+2.  **[Global Documentation](../../doc/README.md)**
+    Link to the core system documentation, including architecture and API reference.
+
+---
+
+## Technical Stack Reference
+
+- **Core:** React, TypeScript, Vite.
+- **Styling:** Tailwind CSS, Framer Motion.
+- **Components:** Radix UI primitives.
+
