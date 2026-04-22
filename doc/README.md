@@ -1,15 +1,27 @@
-# EquiHire Documentation
+# EquiHire Documentation Index
 
-Welcome to the EquiHire Core documentation. This folder contains detailed information about the system architecture, API reference, and specific workflows.
+This directory contains the technical documentation for the EquiHire platform. It provides a comprehensive guide to the system's architecture, security protocols, and integration interfaces.
 
-## Table of Contents
+---
 
-1.  **[System Overview/Introduction](./introduction.md)**: Detailed problem, solution, **Architecture Diagram**, and roadmap.
-2.  **[Getting Started](./getting-started.md)**: Installation and setup guide.
-3.  **[Identity Lifecycle](./identity-lifecycle.md)**: Detailed flow of Authentication, Sign-up, and Magic Link Invitations using Asgardeo.
-4.  **[API Reference](./api-endpoints.md)**: List of available HTTP endpoints.
+## Technical Documentation
 
-## Project Structure
+1.  **[Introduction and Architecture Overview](./introduction.md)**
+    Detailed analysis of the recruitment bias problem and the "Agentic Bias Firewall" solution. Includes system-level orchestration diagrams and the project roadmap.
 
--   `ballerina-gateway`: The core orchestrator.
--   `react-frontend`: The dashboard for Recruiters.
+2.  **[Getting Started and Local Development](./getting-started.md)**
+    A guide to configuring runtime environments, managed services (Supabase, Asgardeo, Gemini), and executing the platform locally.
+
+3.  **[Identity and Authentication Lifecycle](./identity-lifecycle.md)**
+    Technical breakdown of the authentication flows, including WSO2 Asgardeo integration, Magic Link invitations, and session security.
+
+4.  **[REST API Reference](./api-endpoints.md)**
+    Detailed specification of the Ballerina Gateway endpoints, including request/response schemas and AI pipeline triggers.
+
+---
+
+## Project Structure Reference
+
+- **[ballerina-gateway](../ballerina-gateway/README.md)**: The integration hub used for AI orchestration and data persistence.
+- **[react-frontend](../react-frontend/README.md)**: The administrative and candidate-facing user interfaces.
+
