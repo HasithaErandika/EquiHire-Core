@@ -4,18 +4,18 @@ Welcome to the EquiHire setup guide. Follow these instructions to configure and 
 
 ---
 
-## 🛠 Prerequisites
+## Prerequisites
 
 Ensure your system meets the following requirements before proceeding with the installation.
 
-### 💻 Runtime Environments
+### Runtime Environments
 | Tool | Version | Purpose |
 | :--- | :--- | :--- |
 | **Ballerina** | Swan Lake (Update 8 or higher) | Backend microservices & gateway |
 | **Node.js** | 18.x or higher (LTS recommended) | Frontend development & tooling |
 | **npm** | 9.x or higher | Dependency management |
 
-### ☁️ Managed Services
+### Managed Services
 EquiHire integrates several cloud services. You will need active accounts for the following:
 *   **Supabase:** PostgreSQL database and authentication.
 *   **Google Gemini:** AI-driven CV parsing and evaluations.
@@ -26,7 +26,7 @@ EquiHire integrates several cloud services. You will need active accounts for th
 
 ---
 
-## 🚀 Installation & Configuration
+## Installation & Configuration
 
 ### 1. Repository Setup
 Clone the EquiHire repository to your local machine:
@@ -54,8 +54,7 @@ The backend gateway handles API routing and core logic.
     ```
 3.  Open `Config.toml` and populate it with your service credentials.
 
-> [!IMPORTANT]
-> The Cloudflare R2 `accessKeyId` is a literal string identifier, not a URL. Ensure all AI API keys are correctly scoped.
+**IMPORTANT:** The Cloudflare R2 `accessKeyId` is a literal string identifier, not a URL. Ensure all AI API keys are correctly scoped.
 
 4.  Start the Ballerina service:
     ```bash
@@ -81,7 +80,7 @@ The frontend is built with React and Vite.
 
 ---
 
-## 🔍 Verification
+## Verification
 Once both the backend and frontend are running:
 *   Frontend: [http://localhost:5173](http://localhost:5173)
 *   Backend Gateway: [http://localhost:9092](http://localhost:9092)
@@ -90,7 +89,7 @@ Attempt a test login using an Asgardeo-registered account to verify the full aut
 
 ---
 
-## 📚 Related Documentation
+## Related Documentation
 *   [Introduction](./introduction.md) - Project overview and core concepts.
 *   [API Reference](./api-endpoints.md) - Detailed endpoint documentation.
 *   [Frontend Design](./frontend-design.md) - UI/UX standards and architecture.
