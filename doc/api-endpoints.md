@@ -1,816 +1,615 @@
-# EquiHire-Core API Reference & Postman Guide
+# EquiHire-Core API Reference
 
-This document describes all REST API endpoints exposed by the **EquiHire-Core** system (Ballerina Gateway + Python AI Engine) and includes instructions for testing them in Postman.
+**Base URL (local development):** `http://localhost:9092/api`
 
-## Base URL
-**Gateway API (Public & Admin endpoints)**  
-`http://localhost:9092/api`
+All endpoints accept and return `application/json` unless otherwise noted. CORS is open (`*`) for all origins.
 
 ---
 
-## API Endpoints – Ballerina Gateway (Port 9092)
+## 1. Organizations
 
-### 1. Organizations
+### POST /organizations
+Register a new organization and create its first recruiter record.
 
-| Action                  | Method | Endpoint                                          | Description                              | Query / Path Params       | Request Body Example (main fields)                     |
-|-------------------------|--------|---------------------------------------------------|------------------------------------------|----------------------------|--------------------------------------------------------|
-| Create organization     | POST   | `/organizations`                                  | Register new organization                | —                          | `name`, `industry`, `size`, `userId`, `userEmail`      |
-| Get my organization     | GET    | `/me/organization`                                | Retrieve org linked to current user      | `userId`                   | —                                                      |
-| Update organization     | PUT    | `/organization`                                   | Modify organization details              | `userId`                   | `id`, `name`, `industry`, `size`                       |
+**Request Body**
 
-### 2. Jobs
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Display name of the organization |
+| `industry` | string | Yes | Industry category |
+| `size` | string | Yes | Company size band (e.g., `1-10`, `11-50`, `50+`) |
+| `userId` | string | Yes | Asgardeo user ID of the account owner |
+| `userEmail` | string | Yes | Email address of the account owner |
 
-| Action                  | Method | Endpoint                                          | Description                              | Path / Query Params       | Request Body Example (main fields)                     |
-|-------------------------|--------|---------------------------------------------------|------------------------------------------|----------------------------|--------------------------------------------------------|
-| Create job              | POST   | `/jobs`                                           | Post a new job opening                   | —                          | `title`, `description`, `requiredSkills`, `organizationId`, `recruiterId` |
-| List recruiter's jobs   | GET    | `/jobs`                                           | Get all jobs created by recruiter        | `userId`                   | —                                                      |
-| Update job              | PUT    | `/jobs/{jobId}`                                   | Modify job details                       | `jobId`                    | `title`, `description`, `requiredSkills`, …            |
-| Delete job              | DELETE | `/jobs/{jobId}`                                   | Remove job posting                       | `jobId`                    | —                                                      |
+**Response `200`**
 
-### 3. Job Questions
-
-| Action                        | Method | Endpoint                               | Description                              | Path / Query Params       | Request Body Example (main fields)                     |
-|-------------------------------|--------|----------------------------------------|------------------------------------------|----------------------------|--------------------------------------------------------|
-| Create questions (bulk)       | POST   | `/jobs/questions`                      | Add multiple interview questions         | —                          | `questions` array (`jobId`, `questionText`, `sampleAnswer`, `keywords`, `type`) |
-| List questions for a job      | GET    | `/jobs/{jobId}/questions`              | Retrieve all questions of a job          | `jobId`                    | —                                                      |
-| Update single question        | PUT    | `/questions/{questionId}`              | Modify existing question                 | `questionId`               | `questionText`, `sampleAnswer`, `keywords`, `type`     |
-| Delete question               | DELETE | `/questions/{questionId}`              | Remove a question                        | `questionId`               | —                                                      |
-
-### 4. Invitations (Magic Links)
-
-| Action                        | Method | Endpoint                                      | Description                              | Path / Query Params       | Request Body Example (main fields)                     |
-|-------------------------------|--------|-----------------------------------------------|------------------------------------------|----------------------------|--------------------------------------------------------|
-| Create invitation             | POST   | `/invitations`                                | Send magic-link interview invite         | —                          | `recruiterId`, `organizationId`, `jobId`, `candidateEmail`, `candidateName`, `interviewDate` |
-| List recruiter's invitations  | GET    | `/invitations`                                | Get all sent invitations                 | `userId`                   | —                                                      |
-| Validate token                | GET    | `/invitations/validate/{token}`               | Check if magic link is valid             | `token`                    | —                                                      |
-
-### 5. Candidates & Assessment Flow
-
-| Action                              | Method | Endpoint                                           | Description                                      | Path / Query Params          | Request Body Example (main fields)                          |
-|-------------------------------------|--------|----------------------------------------------------|--------------------------------------------------|------------------------------|-------------------------------------------------------------|
-| Complete resume upload & trigger AI | POST   | `/candidates/upload-cv`                            | Uploads multipart CV file and starts parsing     | —                            | `file` and `jobId` multipart elements                       |
-| Start Candidate Session             | POST   | `/candidates/{candidateId}/start-session`          | Starts tracking a new exam session               | `candidateId`                | `jobId`, `invitationId` (optional)                          |
-| Evaluate candidate answer           | POST   | `/candidates/{candidateId}/evaluate`               | Score answer relevance & quality                 | `candidateId`                | `candidateAnswer`, `question`, `modelAnswer`                |
-| Reveal candidate identity           | GET    | `/candidates/{candidateId}/reveal`                 | Unmask anonymized candidate (admin/recruiter)    | `candidateId`                | —                                                           |
-| Re-Evaluate candidate CV            | POST   | `/candidates/{candidateId}/evaluate-cv`            | Explicitly trigger AI CV parsing on existing CV  | `candidateId`                | —                                                           |
-| Flag Cheating                       | POST   | `/candidates/{candidateId}/flag-cheating`          | Register a security violation/cheating flag      | `candidateId`                | `violation_details`, `severity`                             |
-| List candidates for organization    | GET    | `/organizations/{organizationId}/candidates`       | View all candidates in org                       | `organizationId`             | —                                                           |
-| Submit final decision               | POST   | `/candidates/{candidateId}/decide`                 | Record hire/reject decision & trigger email      | `candidateId`                | `threshold`, `notes` (optional)                             |
-
-### 6. Evaluation Templates & Audit Logs
-
-| Action                        | Method | Endpoint                                                  | Description                                      | Path / Query Params              | Request Body Example (main fields)                          |
-|-------------------------------|--------|-----------------------------------------------------------|--------------------------------------------------|----------------------------------|-------------------------------------------------------------|
-| List evaluation templates     | GET    | `/organizations/{organizationId}/evaluation-templates`    | Get all templates of an organization             | `organizationId`                 | —                                                           |
-| Create template               | POST   | `/evaluation-templates`                                   | Define new scoring / prompting template          | —                                | `organizationId`, `name`, `description`, `type`, `prompt_template` |
-| Update template               | PUT    | `/evaluation-templates/{id}`                              | Modify existing template                         | `id`                             | `name`, `description`, `prompt_template`, …                 |
-| Delete template               | DELETE | `/evaluation-templates/{id}`                              | Remove template                                  | `id` + query `organizationId`    | —                                                           |
-| Get audit logs                | GET    | `/organizations/{organizationId}/audit-logs`              | Retrieve action history                          | `organizationId`                 | —                                                           |
+```json
+{ "id": "<org-uuid>", "name": "Acme Corp" }
+```
 
 ---
 
-## Postman Collection – Professional Setup
+### GET /me/organization
+Retrieve the organization linked to a given user.
 
-For consistent and efficient testing across your team, import the ready-to-use **Postman Collection** below.
+**Query Parameters**
 
-### Import Instructions
-1. Copy the entire JSON block
-2. In Postman: **File → Import → Raw text** → paste → **Import**
-3. (Recommended) Create a Postman **Environment** for variables like `baseUrl`, `userId`, `organizationId`, etc.
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `userId` | string | Yes | Asgardeo user ID |
 
-> **Security Note**  
-> This collection uses `localhost` and placeholder values only. It contains **no secrets**.  
-> For real environments, use Postman Environments / Variables to store tokens, IDs, and base URLs.
+**Response `200`** — Returns an `OrganizationResponse` object.
 
-<details>
-<summary>EquiHire Postman Collection (JSON)</summary>
+**Response `500`** — User has no linked organization.
+
+---
+
+### PUT /organization
+Update organization industry and size.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `organizationId` | string | Yes | UUID of the organization to update |
+| `industry` | string | Yes | New industry value |
+| `size` | string | Yes | New size band |
+
+**Response `200`**
+
+```json
+{ "status": "updated" }
+```
+
+---
+
+## 2. Jobs
+
+### POST /jobs
+Create a new job posting.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | Yes | Job title |
+| `description` | string | Yes | Full job description |
+| `requiredSkills` | string[] | Yes | List of required skills |
+| `organizationId` | string | Yes | UUID of the owning organization |
+| `recruiterId` | string | Yes | Asgardeo user ID of the recruiter (resolved to internal UUID internally) |
+| `evaluationTemplateId` | string | No | UUID of the evaluation template to attach |
+
+**Response `200`**
+
+```json
+{ "id": "<job-uuid>" }
+```
+
+---
+
+### GET /jobs
+List all jobs belonging to a recruiter.
+
+**Query Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `userId` | string | Yes | Asgardeo user ID of the recruiter |
+
+**Response `200`** — JSON array of job objects.
+
+---
+
+### PUT /jobs/{jobId}
+Update a job posting.
+
+**Path Parameters:** `jobId` — UUID of the job.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | Yes | Updated title |
+| `description` | string | Yes | Updated description |
+| `requiredSkills` | string[] | Yes | Updated skills list |
+| `evaluationTemplateId` | string | No | Updated template reference |
+| `organizationId` | string | No | Org UUID — required for audit log |
+| `recruiterId` | string | No | Recruiter user ID — required for audit log |
+
+**Response `200`**
+
+```json
+{ "status": "updated" }
+```
+
+---
+
+### DELETE /jobs/{jobId}
+Delete a job posting.
+
+**Path Parameters:** `jobId` — UUID of the job.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `organizationId` | string | Yes | Org UUID for audit log |
+| `recruiterId` | string | No | Recruiter user ID for audit log |
+
+**Response `200`**
+
+```json
+{ "status": "deleted" }
+```
+
+---
+
+## 3. Job Questions
+
+### POST /jobs/questions
+Create one or more interview questions for a job (bulk).
+
+**Request Body**
 
 ```json
 {
-	"info": {
-		"_postman_id": "8b51c312-6150-4fc7-bf84-f3c0512521c7",
-		"name": "EquiHire API Collection",
-		"description": "Comprehensive API collection for the EquiHire-Core backend, configured from gateway endpoints.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "1. Organizations",
-			"item": [
-				{
-					"name": "Create Organization",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Tech Corp\",\n  \"industry\": \"Software\",\n  \"size\": \"Start-up\",\n  \"userId\": \"user_123\",\n  \"userEmail\": \"admin@techcorp.com\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/organizations",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"organizations"
-							]
-						}
-					}
-				},
-				{
-					"name": "Get Organization by User ID",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/me/organization?userId=user_123",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"me",
-								"organization"
-							],
-							"query": [
-								{
-									"key": "userId",
-									"value": "user_123"
-								}
-							]
-						}
-					}
-				},
-				{
-					"name": "Update Organization",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"organizationId\": \"org_555\",\n  \"industry\": \"FinTech\",\n  \"size\": \"11-50\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/organization",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"organization"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "2. Jobs",
-			"item": [
-				{
-					"name": "Create Job",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"title\": \"Senior Backend Engineer\",\n  \"description\": \"5+ years experience in Python and Go.\",\n  \"requiredSkills\": [\"Python\", \"Go\", \"AWS\"],\n  \"organizationId\": \"org_555\",\n  \"recruiterId\": \"user_123\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/jobs",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"jobs"
-							]
-						}
-					}
-				},
-				{
-					"name": "Get Jobs for Recruiter",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/jobs?userId=user_123",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"jobs"
-							],
-							"query": [
-								{
-									"key": "userId",
-									"value": "user_123"
-								}
-							]
-						}
-					}
-				},
-				{
-					"name": "Update Job",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"title\": \"Lead Backend Engineer\",\n  \"description\": \"Updated Description\",\n  \"requiredSkills\": [\"Python\", \"Go\", \"AWS\", \"Kubernetes\"]\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/jobs/job_111",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"jobs",
-								"job_111"
-							]
-						}
-					}
-				},
-				{
-					"name": "Delete Job",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/jobs/job_111",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"jobs",
-								"job_111"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "3. Questions",
-			"item": [
-				{
-					"name": "Create Job Questions",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"questions\": [\n    {\n      \"jobId\": \"job_111\",\n      \"questionText\": \"Explain REST vs GraphQL.\",\n      \"sampleAnswer\": \"REST is architectural, GraphQL is a query language...\",\n      \"keywords\": [\"endpoints\", \"query\", \"over-fetching\"],\n      \"type\": \"paragraph\"\n    }\n  ]\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/jobs/questions",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"jobs",
-								"questions"
-							]
-						}
-					}
-				},
-				{
-					"name": "Get Questions for Job",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/jobs/job_111/questions",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"jobs",
-								"job_111",
-								"questions"
-							]
-						}
-					}
-				},
-				{
-					"name": "Update Question",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"questionText\": \"Explain REST vs GraphQL in depth.\",\n  \"sampleAnswer\": \"Updated Answer\",\n  \"keywords\": [\"endpoints\", \"query\", \"over-fetching\", \"caching\"],\n  \"type\": \"paragraph\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/questions/question_111",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"questions",
-								"question_111"
-							]
-						}
-					}
-				},
-				{
-					"name": "Delete Question",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/questions/question_111",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"questions",
-								"question_111"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "4. Invitations",
-			"item": [
-				{
-					"name": "Create Invitation",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"recruiterId\": \"user_123\",\n  \"organizationId\": \"org_555\",\n  \"jobId\": \"job_111\",\n  \"candidateEmail\": \"candidate@example.com\",\n  \"candidateName\": \"John Doe\",\n  \"interviewDate\": \"2024-03-01T10:00:00Z\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/invitations",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"invitations"
-							]
-						}
-					}
-				},
-				{
-					"name": "Get Invitations for Recruiter",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/invitations?userId=user_123",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"invitations"
-							],
-							"query": [
-								{
-									"key": "userId",
-									"value": "user_123"
-								}
-							]
-						}
-					}
-				},
-				{
-					"name": "Validate Invitation Token",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/invitations/validate/sample-token-123",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"invitations",
-								"validate",
-								"sample-token-123"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "5. Candidates",
-			"item": [
-				{
-					"name": "Upload CV",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "multipart/form-data"
-							}
-						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{ "key": "file", "type": "file" },
-								{ "key": "jobId", "value": "job_111", "type": "text" }
-							]
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/upload-cv",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"upload-cv"
-							]
-						}
-					}
-				},
-				{
-					"name": "Start Session",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"jobId\": \"job_111\",\n    \"invitationId\": \"inv_111\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/cand_999/start-session",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"cand_999",
-								"start-session"
-							]
-						}
-					}
-				},
-				{
-					"name": "Submit Assessment Evaluation",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"answers\": [\n    {\n      \"questionId\": \"q_1\",\n      \"questionText\": \"Explain REST\",\n      \"candidateAnswer\": \"Representational state transfer uses HTTP\",\n      \"score\": 85.0\n    }\n  ],\n  \"overallScore\": 85.0\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/cand_999/evaluate",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"cand_999",
-								"evaluate"
-							]
-						}
-					}
-				},
-				{
-					"name": "Reveal Candidate Identity",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/cand_999/reveal",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"cand_999",
-								"reveal"
-							]
-						}
-					}
-				},
-				{
-					"name": "Re-Evaluate CV",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/cand_999/evaluate-cv",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"cand_999",
-								"evaluate-cv"
-							]
-						}
-					}
-				},
-				{
-					"name": "Flag Cheating",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"violation_details\": \"Detected unauthorized browser window navigation.\",\n  \"severity\": \"high\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/cand_999/flag-cheating",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"cand_999",
-								"flag-cheating"
-							]
-						}
-					}
-				},
-				{
-					"name": "Submit Decision",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"threshold\": 70.0,\n  \"notes\": \"Strong candidate, good fundamentals\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/candidates/cand_999/decide",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"candidates",
-								"cand_999",
-								"decide"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "6. Templates & Audits",
-			"item": [
-				{
-					"name": "Get Evaluation Templates",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/organizations/org_555/evaluation-templates",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"organizations",
-								"org_555",
-								"evaluation-templates"
-							]
-						}
-					}
-				},
-				{
-					"name": "Create Evaluation Template",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n        \"organizationId\": \"org_555\",\n        \"name\": \"Frontend Standard\",\n        \"description\": \"Standard template for frontend devs.\",\n        \"type\": \"react\",\n        \"prompt_template\": \"Evaluate React proficiency...\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/evaluation-templates",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"evaluation-templates"
-							]
-						}
-					}
-				},
-				{
-					"name": "Update Evaluation Template",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n        \"name\": \"Frontend Standard V2\",\n        \"description\": \"Updated standard template.\",\n        \"type\": \"react\",\n        \"organizationId\": \"org_555\",\n        \"prompt_template\": \"Evaluate React proficiency with hooks...\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/evaluation-templates/tmpl_111",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"evaluation-templates",
-								"tmpl_111"
-							]
-						}
-					}
-				},
-				{
-					"name": "Delete Evaluation Template",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"organizationId\": \"org_555\"\n}"
-						},
-						"url": {
-							"raw": "http://localhost:9092/api/evaluation-templates/tmpl_111",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"evaluation-templates",
-								"tmpl_111"
-							]
-						}
-					}
-				},
-				{
-					"name": "Get Audit Logs",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:9092/api/organizations/org_555/audit-logs",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "9092",
-							"path": [
-								"api",
-								"organizations",
-								"org_555",
-								"audit-logs"
-							]
-						}
-					}
-				}
-			]
-		}
-	]
+  "questions": [
+    {
+      "jobId": "<job-uuid>",
+      "questionText": "Explain the CAP theorem.",
+      "sampleAnswer": "Consistency, Availability, Partition tolerance...",
+      "keywords": ["consistency", "availability", "partition"],
+      "type": "paragraph"
+    }
+  ]
 }
 ```
 
-</details>
+**Response `200`**
 
-
-
+```json
+{ "status": "created", "count": 1 }
+```
 
 ---
 
+### GET /jobs/{jobId}/questions
+Retrieve all questions for a job.
+
+**Path Parameters:** `jobId` — UUID of the job.
+
+**Response `200`** — JSON array of `QuestionItem` objects.
+
+---
+
+### PUT /questions/{questionId}
+Update a single question.
+
+**Path Parameters:** `questionId` — UUID of the question.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `questionText` | string | Yes | Updated question text |
+| `sampleAnswer` | string | Yes | Updated model answer |
+| `keywords` | string[] | Yes | Updated keyword hints |
+| `type` | string | Yes | Question type (`paragraph`, `mcq`, etc.) |
+
+**Response `200`**
+
+```json
+{ "status": "updated" }
+```
+
+---
+
+### DELETE /questions/{questionId}
+Delete a question.
+
+**Path Parameters:** `questionId` — UUID of the question.
+
+**Response `200`**
+
+```json
+{ "status": "deleted" }
+```
+
+---
+
+## 4. Invitations
+
+### POST /invitations
+Create a magic-link invitation and dispatch the invitation email.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `recruiterId` | string | Yes | Asgardeo user ID of the recruiter |
+| `organizationId` | string | Yes | UUID of the organization |
+| `jobId` | string | Yes | UUID of the target job |
+| `candidateEmail` | string | Yes | Candidate email address |
+| `candidateName` | string | Yes | Candidate display name |
+| `jobTitle` | string | Yes | Job title shown in the email |
+| `interviewDate` | string | No | ISO 8601 interview date hint |
+
+**Response `200`**
+
+```json
+{
+  "id": "<invitation-uuid>",
+  "token": "<uuid-token>",
+  "magicLink": "https://app.example.com/invite/<uuid-token>",
+  "candidateEmail": "candidate@example.com",
+  "expiresAt": "2026-04-29T15:00:00Z"
+}
+```
+
+> Invitations expire after **7 days**. Each token is single-use — it is marked `used_at` on the first valid validation.
+
+---
+
+### GET /invitations
+List all invitations sent by a recruiter.
+
+**Query Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `userId` | string | Yes | Asgardeo user ID of the recruiter |
+
+**Response `200`** — JSON array of invitation objects.
+
+---
+
+### GET /invitations/validate/{token}
+Validate a magic-link token. This endpoint is called by the candidate portal on page load.
+
+**Path Parameters:** `token` — The UUID token from the magic link URL.
+
+**Response `200` — Valid token**
+
+```json
+{
+  "valid": true,
+  "candidateEmail": "candidate@example.com",
+  "candidateName": "Jane Smith",
+  "jobTitle": "Senior Backend Engineer",
+  "organizationId": "<org-uuid>",
+  "jobId": "<job-uuid>",
+  "invitationId": "<invitation-uuid>"
+}
+```
+
+**Response `200` — Invalid token** (expired or already used)
+
+```json
+{ "valid": false, "message": "This invitation link has expired" }
+```
+
+---
+
+## 5. Candidates and Assessment
+
+### POST /candidates/upload-cv
+Upload a candidate CV. Triggers the full AI pipeline: PDF extraction, Gemini structured parsing, PII mapping, R2 storage, and asynchronous CV evaluation.
+
+**Request:** `multipart/form-data`
+
+| Part | Type | Required | Description |
+|---|---|---|---|
+| `file` | binary (PDF) | Yes | The CV file |
+| `jobId` | text | Yes | UUID of the target job |
+
+**Response `200`**
+
+```json
+{
+  "status": "success",
+  "candidateId": "<candidate-uuid>",
+  "r2Key": "cvs/<candidate-uuid>.pdf",
+  "parsed": {
+    "experienceLevel": "Senior",
+    "detectedStack": ["Python", "Kubernetes", "PostgreSQL"],
+    "sections": { "education": [...], "work_experience": [...] }
+  }
+}
+```
+
+> The candidate identity (`candidateId`) must be passed to all subsequent endpoints. CV evaluation runs asynchronously — scores appear in the candidate record after a short delay.
+
+---
+
+### POST /candidates/{candidateId}/start-session
+Begin a tracked exam session for a candidate.
+
+**Path Parameters:** `candidateId` — UUID returned by `upload-cv`.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `jobId` | string | Yes | UUID of the job |
+| `invitationId` | string | No | UUID of the invitation (for audit) |
+
+**Response `200`**
+
+```json
+{ "sessionId": "<session-uuid>", "candidateId": "<candidate-uuid>" }
+```
+
+---
+
+### POST /candidates/{candidateId}/evaluate
+Submit a completed assessment. Writes raw answers immediately, then runs the full grading pipeline asynchronously (HF gate + Gemini scoring).
+
+**Path Parameters:** `candidateId` — UUID of the candidate.
+
+**Request Body**
+
+```json
+{
+  "sessionId": "<session-uuid>",
+  "jobId": "<job-uuid>",
+  "submissionType": "manual",
+  "answers": [
+    {
+      "questionId": "<question-uuid>",
+      "answerText": "REST is a stateless architectural style using HTTP verbs.",
+      "timeSpentSeconds": 120
+    }
+  ],
+  "cheatEvents": [
+    {
+      "eventType": "tab_switch",
+      "occurredAt": "2026-04-22T10:05:30Z",
+      "details": "switched to Chrome DevTools"
+    }
+  ]
+}
+```
+
+**Response `200`**
+
+```json
+{ "status": "submitted", "candidateId": "<uuid>", "answersReceived": 5 }
+```
+
+> Grading is asynchronous. Poll the candidate list or transcript endpoint to see when scores are populated.
+
+---
+
+### GET /candidates/{candidateId}/reveal
+Unmask a candidate's identity (PII reveal). Restricted to authorised recruiters. Creates an audit log entry on every call.
+
+**Path Parameters:** `candidateId` — UUID of the candidate.
+
+**Response `200`**
+
+```json
+{
+  "candidateId": "<uuid>",
+  "fullName": "Jane Smith",
+  "email": "jane@example.com",
+  "phone": "+1-555-0100"
+}
+```
+
+---
+
+### POST /candidates/{candidateId}/evaluate-cv
+Re-trigger AI CV evaluation on demand (for example, after a job's evaluation template is updated).
+
+**Path Parameters:** `candidateId` — UUID of the candidate.
+
+**Response `200`**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### GET /candidates/{candidateId}/transcript
+Retrieve the full assessment transcript including all answers, scores, CV metadata, and evaluation summary.
+
+**Path Parameters:** `candidateId` — UUID of the candidate.
+
+**Response `200`**
+
+```json
+{
+  "candidateId": "<uuid>",
+  "candidateName": "Candidate #A3F2",
+  "candidateEmail": "redacted",
+  "jobTitle": "Senior Backend Engineer",
+  "appliedDate": "2026-04-22",
+  "overallScore": 78.5,
+  "cvScore": 82.0,
+  "skillsScore": 74.0,
+  "interviewScore": 77.0,
+  "summaryFeedback": "Strong distributed systems knowledge...",
+  "transcript": [ { "questionText": "...", "answerText": "...", "score": 8 } ],
+  "education": [...],
+  "workExperience": [...],
+  "technicalSkills": [...],
+  "phone": "redacted"
+}
+```
+
+---
+
+### POST /candidates/{candidateId}/decide
+Record a final hiring decision. Updates the candidate status and dispatches an acceptance or rejection email with the evaluation summary.
+
+**Path Parameters:** `candidateId` — UUID of the candidate.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `decision` | string | Yes | Must be `"accepted"` or `"rejected"` |
+
+**Response `200`**
+
+```json
+{
+  "candidateId": "<uuid>",
+  "pass": true,
+  "emailSent": true,
+  "status": "accepted",
+  "overallScore": 78.5,
+  "cvScore": 82.0,
+  "skillsScore": 74.0,
+  "interviewScore": 77.0
+}
+```
+
+---
+
+### POST /candidates/{candidateId}/flag-cheating
+Record a legacy integrity violation flag (for clients that do not submit `cheatEvents` via the `evaluate` endpoint).
+
+**Path Parameters:** `candidateId` — UUID of the candidate.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `organizationId` | string | Yes | UUID of the organization |
+| `violations` | object | Yes | Key-value map of violation types to details |
+
+**Response `200`**
+
+```json
+{ "status": "flagged", "candidateId": "<uuid>" }
+```
+
+---
+
+### GET /organizations/{organizationId}/candidates
+List all candidates belonging to an organization.
+
+**Path Parameters:** `organizationId` — UUID of the organization.
+
+**Response `200`** — JSON array of `CandidateResponse` objects.
+
+---
+
+## 6. Evaluation Templates
+
+### GET /organizations/{organizationId}/evaluation-templates
+List all evaluation templates for an organization.
+
+**Path Parameters:** `organizationId` — UUID of the organization.
+
+**Response `200`** — JSON array of template objects.
+
+---
+
+### POST /evaluation-templates
+Create a new evaluation template.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `organizationId` | string | Yes | UUID of the owning organization |
+| `name` | string | Yes | Template display name |
+| `description` | string | Yes | Brief description of use case |
+| `type` | string | No | Template type (default: `QUESTIONNAIRE`) |
+| `prompt_template` | string | Yes | AI prompt instructions for this role type |
+
+**Response `200`** — Created template object.
+
+---
+
+### PUT /evaluation-templates/{id}
+Update an existing template.
+
+**Path Parameters:** `id` — UUID of the template.
+
+**Request Body** — Same fields as POST, all required.
+
+**Response `200`**
+
+```json
+{ "status": "updated" }
+```
+
+---
+
+### DELETE /evaluation-templates/{id}
+Delete a template.
+
+**Path Parameters:** `id` — UUID of the template.
+
+**Request Body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `organizationId` | string | Yes | UUID of the organization (ownership check) |
+
+**Response `200`**
+
+```json
+{ "status": "deleted" }
+```
+
+---
+
+## 7. Audit Logs
+
+### GET /organizations/{organizationId}/audit-logs
+Retrieve the full audit trail for an organization.
+
+**Path Parameters:** `organizationId` — UUID of the organization.
+
+**Response `200`** — JSON array of audit log entries ordered by timestamp descending.
+
+```json
+[
+  {
+    "id": "<uuid>",
+    "organizationId": "<uuid>",
+    "action": "CV Uploaded",
+    "entityType": "Candidate",
+    "entityId": "<candidate-uuid>",
+    "metadata": { "jobId": "<uuid>" },
+    "createdAt": "2026-04-22T10:00:00Z"
+  }
+]
+```
+
+**Audit action values**
+
+| Action String | Trigger |
+|---|---|
+| `CV Uploaded` | `POST /candidates/upload-cv` |
+| `Session Started` | `POST /candidates/{id}/start-session` |
+| `Submit Assessment` | `POST /candidates/{id}/evaluate` |
+| `Candidate Accepted` | `POST /candidates/{id}/decide` with `accepted` |
+| `Candidate Rejected` | `POST /candidates/{id}/decide` with `rejected` |
+| `CV Accessed` | `GET /candidates/{id}/reveal` |
+| `Transcript Viewed` | `GET /candidates/{id}/transcript` |
+| `Send Invitation` | `POST /invitations` |
+| `Invitation Accepted` | `GET /invitations/validate/{token}` (valid) |
+| `Job Updated` | `PUT /jobs/{jobId}` |
+| `Job Deleted` | `DELETE /jobs/{jobId}` |
+| `Template Updated` | `PUT /evaluation-templates/{id}` |
+| `Template Deleted` | `DELETE /evaluation-templates/{id}` |
+| `Organization Updated` | `PUT /organization` |
+
+---
+
+## 8. Health
+
+### GET /health
+Liveness check endpoint.
+
+**Response `200`**
+
+```json
+{ "status": "UP" }
+```
