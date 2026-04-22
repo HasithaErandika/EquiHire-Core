@@ -1,16 +1,20 @@
 import ballerina/test;
 import equihire/gateway.utils;
 
-@test:Config {}
+@test:Config {
+    groups: ["unit"]
+}
 function testBuildCvParsePrompt() {
     string rawText = "Experience: 5 years Java. Education: BSc Computer Science.";
     string prompt = utils:buildCvParsePrompt(rawText);
     
     test:assertTrue(prompt.includes("Experience: 5 years Java"), "Prompt should contain the raw text");
-    test:assertTrue(prompt.includes("JSON profile"), "Prompt should ask for JSON format");
+    test:assertTrue(prompt.includes("JSON object"), "Prompt should ask for JSON format");
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["unit"]
+}
 function testBuildGradingPrompt() {
     string candidateAns = "It is Object oriented programming.";
     string question = "What is OOP?";
@@ -27,7 +31,9 @@ function testBuildGradingPrompt() {
     test:assertTrue(prompt.includes("Score from 0-10"), "Prompt must request a numerical score in the 0-10 range");
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["unit"]
+}
 function testJoinStrings() {
     string[] parts = ["Java", "Spring", "AWS"];
     string joined = utils:joinStrings(parts, ", ");
@@ -37,7 +43,9 @@ function testJoinStrings() {
     test:assertEquals(utils:joinStrings(emptyParts, ", "), "", "Empty string array should return empty string");
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["unit"]
+}
 function testPiiMaskingRoundTrip() {
     map<json> piiMap = {
         "{{NAME_1}}": "Alice Bob",

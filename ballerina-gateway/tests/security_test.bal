@@ -5,7 +5,9 @@
 import ballerina/test;
 import ballerina/http;
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testCorsHeaders() returns error? {
     http:Client testClient = check new("http://localhost:9092");
     map<string|string[]> headers = {"Origin": "http://localhost:3000"};
@@ -23,7 +25,9 @@ function testCorsHeaders() returns error? {
     }
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testMissingAuthScenarios() returns error? {
     http:Client testClient = check new("http://localhost:9092");
 
@@ -41,7 +45,9 @@ function testMissingAuthScenarios() returns error? {
         msg = "Requests against invalid organization resources must be rejected");
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testSqlLikeInjectionPayloads() returns error? {
     http:Client testClient = check new("http://localhost:9092");
 

@@ -7,7 +7,9 @@ import equihire/gateway.config;
 import equihire/gateway.clients;
 import equihire/gateway.constants;
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testAsgardeoConnection() returns error? {
     log:printInfo("Testing Asgardeo JWKS URL Connection...");
     http:Client asgClient = check new(config:asgardeoJwksUrl);
@@ -19,7 +21,9 @@ function testAsgardeoConnection() returns error? {
     }
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testHuggingFaceConnection() returns error? {
     log:printInfo("Testing HuggingFace Inference Connection via Connector...");
     huggingface:ZeroShotClassificationRequest hfPayload = {
@@ -36,7 +40,9 @@ function testHuggingFaceConnection() returns error? {
     }
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testHuggingFaceRelevanceTest() returns error? {
     log:printInfo("Testing HuggingFace Zero-Shot Relevance Evaluation...");
     huggingface:ZeroShotClassificationRequest hfPayload = {
@@ -60,7 +66,9 @@ function testHuggingFaceRelevanceTest() returns error? {
     }
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testGeminiConnection() returns error? {
     log:printInfo("Testing Gemini API Connection...");
     json payload = {"contents": [{"parts": [{"text": "Hello"}]}]};
@@ -72,7 +80,9 @@ function testGeminiConnection() returns error? {
     }
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testSmtpConnection() returns error? {
     log:printInfo("Testing SMTP Connection Init...");
     email:SmtpClient|error smtpClient = new (
@@ -89,7 +99,9 @@ function testSmtpConnection() returns error? {
     }
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testR2Connection() returns error? {
     log:printInfo("Testing Cloudflare R2 Connection...");
     http:Response|error res = clients:r2HttpClient->get("/");
@@ -100,7 +112,9 @@ function testR2Connection() returns error? {
     }
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testSupabaseConnection() returns error? {
     log:printInfo("Testing Supabase Connection...");
     http:Response|error res = clients:supabaseHttpClient->get("/rest/v1/", headers = clients:getSupabaseHeaders());

@@ -3,34 +3,38 @@
 // ===========================================================================
 
 // Masks PII in text using the redaction map from CV parsing.
-// Each key in the map is the original PII value, its value is the redaction token.
+// piiMap convention: key = placeholder token (e.g. {{NAME_1}}), value = original PII (e.g. "Alice Bob").
+// maskPii replaces occurrences of the original PII value with its placeholder key.
 public function maskPii(string text, map<json> piiMap) returns string {
     string result = text;
-    foreach [string, json] [original, redacted] in piiMap.entries() {
-        string replacement = redacted.toString();
-        // Simple string replacement without regex
+    foreach [string, json] [placeholder, originalPii] in piiMap.entries() {
+        string original = originalPii.toString();
+        // Replace original PII with placeholder token
         while result.includes(original) {
             int? idx = result.indexOf(original);
             if idx is int {
                 string before = idx > 0 ? result.substring(0, idx) : "";
                 string after = result.substring(idx + original.length());
-                result = before + replacement + after;
+                result = before + placeholder + after;
             }
         }
     }
     return result;
 }
 
-// Replaces redaction tokens back to original values (for recruiter reveal).
+// Replaces placeholder tokens back to original PII values (for recruiter reveal).
+// piiMap convention: key = placeholder token (e.g. {{NAME_1}}), value = original PII.
+// unmaskPii replaces each placeholder key in the text with its original PII value.
 public function unmaskPii(string text, map<json> piiMap) returns string {
     string result = text;
-    foreach [string, json] [original, redacted] in piiMap.entries() {
-        string token = redacted.toString();
-        while result.includes(token) {
-            int? idx = result.indexOf(token);
+    foreach [string, json] [placeholder, originalPii] in piiMap.entries() {
+        string original = originalPii.toString();
+        // Replace placeholder token with original PII
+        while result.includes(placeholder) {
+            int? idx = result.indexOf(placeholder);
             if idx is int {
                 string before = idx > 0 ? result.substring(0, idx) : "";
-                string after = result.substring(idx + token.length());
+                string after = result.substring(idx + placeholder.length());
                 result = before + original + after;
             }
         }
