@@ -31,8 +31,11 @@ interface TranscriptModalProps {
 
 export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
   const [transcriptData, setTranscriptData] = useState<TranscriptResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // If there is no candidateId we know immediately — skip the loading state.
+  const [loading, setLoading] = useState(!!candidate.candidateId);
+  const [error, setError] = useState<string | null>(
+    candidate.candidateId ? null : 'No candidate ID',
+  );
 
   // Prevent background scroll while modal is open
   useEffect(() => {
@@ -49,7 +52,7 @@ export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
 
   // Fetch transcript
   useEffect(() => {
-    if (!candidate.candidateId) { setError('No candidate ID'); setLoading(false); return; }
+    if (!candidate.candidateId) return; // error already set in initial state
     getTranscript(candidate.candidateId)
       .then(data => setTranscriptData(data))
       .catch(err => { console.error('Transcript fetch failed', err); setError('Failed to load transcript.'); })
@@ -245,7 +248,7 @@ export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
                       <div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Detected Tech Stack & Skills</p>
                         <div className="flex flex-wrap gap-2">
-                          {(Array.isArray(technicalSkills) ? technicalSkills : [technicalSkills]).map((tech: any, i: number) => (
+                          {(Array.isArray(technicalSkills) ? technicalSkills : [technicalSkills]).map((tech: string, i: number) => (
                             <span key={`${tech}-${i}`} className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-md font-medium">{String(tech)}</span>
                           ))}
                         </div>
@@ -256,7 +259,7 @@ export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Education</p>
                         <div className="text-sm text-gray-700 pl-3 border-l-2 border-gray-100">
                           {Array.isArray(education)
-                            ? education.map((edu: any, i: number) => (
+                            ? education.map((edu: Record<string, string>, i: number) => (
                                 <div key={i} className="mb-2">
                                   <p className="font-semibold">{typeof edu === 'string' ? edu : edu.degree || edu.institution || edu.school}</p>
                                   {typeof edu === 'object' && (edu.field || edu.major || edu.duration || edu.year) && (
@@ -274,7 +277,7 @@ export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Work Experience</p>
                         <div className="text-sm text-gray-700 pl-3 border-l-2 border-gray-100">
                           {Array.isArray(workExperience)
-                            ? workExperience.map((job: any, i: number) => (
+                            ? workExperience.map((job: Record<string, string>, i: number) => (
                                 <div key={i} className="mb-2">
                                   <p className="font-semibold">{typeof job === 'string' ? job : job.title || job.position || job.role}</p>
                                   {typeof job === 'object' && (job.company || job.organization || job.duration || job.period) && (
@@ -295,7 +298,7 @@ export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Projects</p>
                         <div className="text-sm text-gray-700 pl-3 border-l-2 border-gray-100">
                           {Array.isArray(projects)
-                            ? projects.map((p: any, i: number) => (
+                            ? projects.map((p: Record<string, string>, i: number) => (
                                 <div key={i} className="mb-2">
                                   <p className="font-semibold">{typeof p === 'string' ? p : p.name || p.title}</p>
                                   {typeof p === 'object' && p.description && (
@@ -313,7 +316,7 @@ export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Achievements</p>
                         <div className="text-sm text-gray-700 pl-3 border-l-2 border-gray-100">
                           {Array.isArray(achievements)
-                            ? achievements.map((a: any, i: number) => (
+                            ? achievements.map((a: Record<string, string>, i: number) => (
                                 <div key={i} className="mb-2">
                                   <p className="font-semibold">{typeof a === 'string' ? a : a.title || a.name}</p>
                                   {typeof a === 'object' && (a.issuer || a.year) && (
@@ -331,7 +334,7 @@ export function TranscriptModal({ candidate, onClose }: TranscriptModalProps) {
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Certificates</p>
                         <div className="text-sm text-gray-700 pl-3 border-l-2 border-gray-100">
                           {Array.isArray(certificates)
-                            ? certificates.map((c: any, i: number) => (
+                            ? certificates.map((c: Record<string, string>, i: number) => (
                                 <div key={i} className="mb-2">
                                   <p className="font-semibold">{typeof c === 'string' ? c : c.title || c.name}</p>
                                   {typeof c === 'object' && (c.issuer || c.year) && (

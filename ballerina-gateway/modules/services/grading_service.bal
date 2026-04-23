@@ -49,7 +49,9 @@ function writeRawAnswers(string candidateId,
                          types:SubmitAssessmentPayload payload) returns map<string>|error {
     map<string> vaultIds = {};
     foreach types:AnswerSubmission ans in payload.answers {
-        int wordCount = ans.answerText.length() / 5;
+        // Estimate word count by splitting on whitespace tokens.
+        string[] tokens = re `\s+`.split(ans.answerText.trim());
+        int wordCount = (ans.answerText.trim() == "") ? 0 : tokens.length();
         string|error rawId = repositories:insertRawAnswer(
             payload.sessionId, candidateId, ans.questionId,
             ans.answerText, ans.timeSpentSeconds, wordCount);
@@ -168,9 +170,16 @@ function summarizeViolations(types:CheatEventItem[] events) returns string {
     foreach var e in events {
         counts[e.eventType] = (counts[e.eventType] ?: 0) + 1;
     }
-    string result = "";
+    string[] parts = [];
     foreach [string, int] [t, c] in counts.entries() {
-        result += string `${t} (${c.toString()}), `;
+        parts.push(string `${t} (${c.toString()})`);
+    }
+    string result = "";
+    foreach int i in 0 ..< parts.length() {
+        result += parts[i];
+        if i < parts.length() - 1 {
+            result += ", ";
+        }
     }
     return result;
 }

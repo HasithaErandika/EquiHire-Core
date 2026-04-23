@@ -34,9 +34,9 @@ export interface UseCandidatesResult {
   /** Mark a candidate as seen and optionally open detail panel */
   handleViewDetails: (candidate: ExtendedCandidate) => void;
   /** Accept candidate and send acceptance email */
-  handleAcceptCandidate: (candidateId: string) => Promise<unknown>;
+  handleAcceptCandidate: (candidateId: string) => Promise<{ emailSent?: boolean }>;
   /** Reject candidate and send rejection email with scores */
-  handleRejectCandidate: (candidateId: string) => Promise<unknown>;
+  handleRejectCandidate: (candidateId: string) => Promise<{ emailSent?: boolean }>;
   /** Refetch candidates (e.g. after decision) */
   refreshCandidates: () => Promise<void>;
 }
@@ -136,7 +136,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         setCandidates(updatedCandidates);
         const updated = updatedCandidates.find(c => c.candidateId === candidateId);
         if (updated) setSelectedCandidate(updated);
-        return res as unknown;
+        return res as { emailSent?: boolean };
       } catch (error) {
         console.error('Accept failed:', error);
         throw error;
@@ -157,7 +157,7 @@ export function useCandidates({ userId }: UseCandidatesOptions): UseCandidatesRe
         setCandidates(updatedCandidates);
         const updated = updatedCandidates.find(c => c.candidateId === candidateId);
         if (updated) setSelectedCandidate(updated);
-        return res as unknown;
+        return res as { emailSent?: boolean };
       } catch (error) {
         console.error('Reject failed:', error);
         throw error;

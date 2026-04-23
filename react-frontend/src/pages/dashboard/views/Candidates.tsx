@@ -53,7 +53,7 @@ export default function CandidateManager() {
   // Wrapper function to handle accept/reject decisions with user feedback
   const handleApplyDecision = async (candidateId: string, decision: 'accepted' | 'rejected') => {
     try {
-      let result: any;
+      let result: { emailSent?: boolean } | undefined;
       if (decision === 'accepted') {
         result = await handleAcceptCandidate(candidateId);
       } else {

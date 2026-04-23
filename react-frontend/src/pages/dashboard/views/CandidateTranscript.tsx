@@ -48,15 +48,14 @@ export default function CandidateTranscript() {
   const interviewScore = urlInterview ?? 0;
 
   const [transcriptItems, setTranscriptItems] = useState<TranscriptItem[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
+  // Derive initial states from the URL param — avoids calling setState inside the effect body.
+  const [loading, setLoading] = useState(!!candidateId);
+  const [error]               = useState<string | null>(
+    candidateId ? null : 'No candidate ID provided.',
+  );
 
   useEffect(() => {
-    if (!candidateId) {
-      setError('No candidate ID provided.');
-      setLoading(false);
-      return;
-    }
+    if (!candidateId) return; // error already set in initial state
 
     getTranscript(candidateId)
       .then(result => {

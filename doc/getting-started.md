@@ -1,4 +1,8 @@
-# Getting Started with EquiHire
+# Getting Started with EquiHire-Core
+
+This guide walks you through setting up the EquiHire-Core platform for local development from scratch.
+
+---
 
 Welcome to the EquiHire setup guide. Follow these instructions to configure and execute the EquiHire platform in your local development environment.
 

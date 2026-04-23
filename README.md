@@ -1,4 +1,4 @@
-# EquiHire-Core
+# EquiHire-Core: AI-Native Blind Assessment Platform
 
 ## The Agentic Bias Firewall for Technical Recruitment
 

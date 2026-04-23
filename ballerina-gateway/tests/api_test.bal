@@ -3,7 +3,9 @@ import ballerina/http;
 
 http:Client testClient = check new ("http://localhost:9092");
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testJobsEndpointBadRequest() returns error? {
     json invalidPayload = {"title": "Test"}; // Bad schema
     http:Response response = check testClient->post("/api/jobs", invalidPayload);
@@ -11,7 +13,9 @@ function testJobsEndpointBadRequest() returns error? {
     test:assertTrue(response.statusCode >= 400, msg = "Expected Bad Request for invalid schema");
 }
 
-@test:Config {}
+@test:Config {
+    groups: ["integration"]
+}
 function testOrganizationsEndpointBadRequest() returns error? {
     json invalidPayload = {"industry": "Tech"}; 
     http:Response response = check testClient->post("/api/organizations", invalidPayload);

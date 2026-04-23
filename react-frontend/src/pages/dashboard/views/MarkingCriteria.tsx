@@ -102,8 +102,12 @@ export default function MarkingCriteria() {
   };
 
   const handleSave = () => {
-    if (isEditing) setConfirmUpdateOpen(true);
-    else doSave();
+    if (isEditing) {
+      setIsOpen(false);
+      setTimeout(() => setConfirmUpdateOpen(true), 150);
+    } else {
+      doSave();
+    }
   };
 
   const handleConfirmUpdate = () => {

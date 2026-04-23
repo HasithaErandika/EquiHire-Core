@@ -105,11 +105,11 @@ export interface TranscriptResponse {
   interviewScore: number;
   summaryFeedback: string;
   transcript: TranscriptItem[];
-  education?: any;
-  workExperience?: any;
-  projects?: any;
-  technicalSkills?: any;
-  achievements?: any;
-  certificates?: any;
+  education?: string | Array<Record<string, string>>;
+  workExperience?: string | Array<Record<string, string>>;
+  projects?: string | Array<Record<string, string>>;
+  technicalSkills?: string | string[];
+  achievements?: string | Array<Record<string, string>>;
+  certificates?: string | Array<Record<string, string>>;
   phone?: string;
 }
