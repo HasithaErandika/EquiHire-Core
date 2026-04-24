@@ -9,10 +9,10 @@ interface AuthConfig {
 }
 
 export const authConfig: AuthConfig = {
-    clientID: import.meta.env.VITE_ASGARDEO_CLIENT_ID,
-    baseUrl: import.meta.env.VITE_ASGARDEO_BASE_URL,
-    signInRedirectURL: import.meta.env.VITE_REDIRECT_URL,
-    signOutRedirectURL: import.meta.env.VITE_REDIRECT_URL,
+    clientID: window.configs?.VITE_ASGARDEO_CLIENT_ID || import.meta.env.VITE_ASGARDEO_CLIENT_ID,
+    baseUrl: window.configs?.VITE_ASGARDEO_BASE_URL || import.meta.env.VITE_ASGARDEO_BASE_URL,
+    signInRedirectURL: window.configs?.VITE_REDIRECT_URL || import.meta.env.VITE_REDIRECT_URL,
+    signOutRedirectURL: window.configs?.VITE_REDIRECT_URL || import.meta.env.VITE_REDIRECT_URL,
     scope: ["openid", "profile", "email"],
-    orgID: import.meta.env.VITE_ASGARDEO_ORG_ID
+    orgID: window.configs?.VITE_ASGARDEO_ORG_ID || import.meta.env.VITE_ASGARDEO_ORG_ID
 };

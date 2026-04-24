@@ -2,7 +2,19 @@
 org = "equihire"
 name = "gateway"
 version = "0.1.0"
-distribution = "2201.7.0"
+distribution = "2201.13.1"
 
 [build-options]
 observabilityIncluded = true
+
+[[platform.java11.dependency]]
+path = "lib/pdfbox-3.0.0.jar"
+
+[[platform.java11.dependency]]
+path = "lib/pdfbox-io-3.0.0.jar"
+
+[[platform.java11.dependency]]
+path = "lib/fontbox-3.0.0.jar"
+
+[[platform.java11.dependency]]
+path = "lib/commons-logging-1.2.jar"

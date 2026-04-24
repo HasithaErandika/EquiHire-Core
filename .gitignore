@@ -27,6 +27,7 @@ env/
 venv/
 .env
 .pytest_cache/
+sri_lankan_employee_ner_dataset.json
 
 # Ballerina
 target/
@@ -38,5 +39,7 @@ docker-compose.override.yml
 
 # Environment Variables (Safety catch-all)
 *.env
+# *.html
+*.pdf
 .env*
 !.env.example

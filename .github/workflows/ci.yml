@@ -1,0 +1,141 @@
+name: EquiHire Core Enterprise CI
+
+on:
+  push:
+    branches: ["main", "development"]
+  pull_request:
+    branches: ["main", "development"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================
+  # FRONTEND PIPELINE
+  # ==========================================
+  frontend-checks:
+    name: Frontend Lint, Type-Check & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react-frontend
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: react-frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Static Analysis (ESLint)
+        run: npm run lint
+
+      - name: TypeScript Type Check
+        run: npx tsc --noEmit
+
+      - name: Unit Tests (Vitest)
+        run: npm run test
+
+  frontend-build:
+    name: Build Frontend Bundle
+    needs: frontend-checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react-frontend
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: react-frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Compile & Build Frontend
+        run: npm run build
+        env:
+          # Vite replaces these at build time; use placeholder values for the
+          # CI bundle-validity check. Real values are injected at deploy time.
+          VITE_API_BASE_URL: "https://placeholder.example.com"
+
+      - name: Upload Frontend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-frontend-build
+          path: react-frontend/dist
+          retention-days: 14
+
+  # ==========================================
+  # BACKEND (BALLERINA) PIPELINE
+  # ==========================================
+  backend-tests:
+    name: Backend Unit Tests (Ballerina)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ballerina-gateway
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ballerina
+        uses: ballerina-platform/setup-ballerina@v1.1.0
+        with:
+          version: 2201.13.1
+
+      - name: Prepare Configuration
+        # Config.toml.example has placeholder credentials; tests/Config.toml
+        # (committed) supplies the real values used during `bal test`.
+        run: cp Config.toml.example Config.toml
+
+      - name: Run Unit Tests
+        # --groups unit runs only tests tagged groups: ["unit"] or groups that
+        # include "unit". Integration tests (connection, security, api) that
+        # require a live server or external credentials are tagged "integration"
+        # and are therefore skipped in CI.
+        run: bal test --groups unit
+
+  backend-build:
+    name: Build Ballerina Gateway
+    needs: backend-tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ballerina-gateway
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ballerina
+        uses: ballerina-platform/setup-ballerina@v1.1.0
+        with:
+          version: 2201.13.1
+
+      - name: Prepare Configuration
+        run: cp Config.toml.example Config.toml
+
+      - name: Build Ballerina Project
+        run: bal build
+
+      - name: Upload Backend Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ballerina-gateway-executable
+          # actions/upload-artifact resolves paths relative to the repo root
+          # (GITHUB_WORKSPACE), not the job's working-directory.
+          path: ballerina-gateway/target/bin
+          retention-days: 14

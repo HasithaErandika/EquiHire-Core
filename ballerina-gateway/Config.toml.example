@@ -1,4 +1,34 @@
-[ballerina_gateway]
-pythonServiceUrl = "http://localhost:8000"
-asgardeoOrgUrl = "https://api.asgardeo.io/t/your_org_name"
-asgardeoJwksUrl = "https://api.asgardeo.io/t/your_org_name/oauth2/jwks"
+[gateway.config]
+
+# Supabase
+supabaseUrl        = "https://your-project.supabase.co"
+supabaseAnonKey    = "your-anon-or-service-role-key"
+supabaseServiceKey = "your-anon-or-service-role-key"
+
+# Google Gemini
+geminiApiKey = "<YOUR_GEMINI_KEY>"
+
+# HuggingFace
+hfToken = "<YOUR_HUGGINGFACE_TOKEN>"
+
+# Cloudflare R2
+r2AccountId  = "<YOUR_CLOUDFLARE_ACCOUNT_ID>"
+r2BucketName = "equihire"
+r2AccessKey  = "<YOUR_R2_ACCESS_KEY_ID>"
+r2SecretKey  = "<YOUR_R2_SECRET_KEY>"
+
+# Frontend
+frontendUrl = "http://localhost:5173"
+
+# Brevo SMTP
+smtpHost      = "smtp-relay.brevo.com"
+smtpPort      = 587
+smtpUsername   = "<YOUR_BREVO_USERNAME>"
+smtpPassword   = "<YOUR_BREVO_PASSWORD>"
+smtpFromEmail  = "<YOUR_BREVO_FROM_EMAIL>"
+
+# WSO2 Asgardeo (OIDC)
+asgardeoOrgUrl   = "https://api.asgardeo.io/t/***********/oauth2/token"
+asgardeoAudience = "EquiHire-Core"
+asgardeoJwksUrl  = "https://api.asgardeo.io/t/***********/oauth2/jwks"
+

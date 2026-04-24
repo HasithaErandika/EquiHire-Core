@@ -1,0 +1,39 @@
+# ===========================================================================
+# ballerina-gateway/docker-compose.yml
+# Development compose file for the EquiHire Ballerina Gateway.
+#
+# This file is intentionally scoped to the backend only. The frontend
+# (React/Vite) is run separately with `npm run dev`.
+#
+# Usage:
+#   cd ballerina-gateway
+#   cp Config.toml.example Config.toml   # and fill in real credentials
+#   docker compose up --build
+# ===========================================================================
+
+version: '3.8'
+
+services:
+
+  ballerina-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: equihire-ballerina-gateway
+    ports:
+      - "9092:9092"
+    volumes:
+      # Mount Config.toml so credentials are not baked into the image.
+      - ./Config.toml:/app/Config.toml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9092/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  default:
+    name: equihire-network
+    driver: bridge
