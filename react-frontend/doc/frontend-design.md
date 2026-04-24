@@ -1,32 +1,27 @@
 # Frontend Design Documentation
 
-## Design Overview
-The EquiHire frontend is engineered with a focus on accessibility, high-integrity assessment environments, and anonymized recruitment dashboards. The design system prioritizes clarity and efficiency to facilitate a bias-free evaluation process.
+## Overview
+This project includes two frontend prototype HTML files for UI reference.
 
----
+## Design Files
 
-## Static Prototypes
-Architectural and UI reference models are available as static HTML prototypes. These files serve as the blueprint for the React component implementation.
+### 1. Recruiter Dashboard
+Path: react-frontend/design/recruiter-dashboard.html
 
-### Recruiter Dashboard Prototype
-- **Path:** `react-frontend/design/recruiter-dashboard.html`
-- **Functionality:** Job management interfaces, organization configuration, and the invitation orchestration flow.
+Description:
+Contains recruiter job management UI, organization setup, and invitation flow.
 
-### Candidate Workflow Prototype
-- **Path:** `react-frontend/design/candidate-flow.html`
-- **Functionality:** Document upload procedures, secure assessment environments, and the evaluation results interface.
+### 2. Candidate Flow
+Path: react-frontend/design/candidate-flow.html
 
----
+Description:
+Contains candidate upload flow, assessment interface, and evaluation process.
 
-## Design Resources
+## Figma Reference
+Figma Link:
+https://www.figma.com/design/TaOgWINAnWhxziI4Wuzbxh/EquiHire_Design?node-id=0-1&t=QUCryU1bJ3jgnGnA-1
 
-### Figma Workspace
-For detailed design tokens, component specifications, and high-fidelity mockups, refer to the project Figma workspace:
-[EquiHire Design System](https://www.figma.com/design/TaOgWINAnWhxziI4Wuzbxh/EquiHire_Design?node-id=0-1&t=QUCryU1bJ3jgnGnA-1)
-
----
-
-## Implementation Guidelines
-- **Component Consistency:** All new components must leverage the established design tokens in the Figma workspace.
-- **Data-Driven UI:** Documentation and API references (Markdown source) are intended to be rendered directly within the application's administrative views for seamless user guidance.
-- **Anonymity First:** UI components must strictly adhere to the project's PII redaction protocols.
+## Notes
+- HTML files are static prototypes
+- Final implementation will use React components
+- Design tokens should follow project theme and in components/documentation there are APIDocs, User guide. tsx pages I need to import the md files from doc/ import and show if can.. in the frontend properly. That would be great 
