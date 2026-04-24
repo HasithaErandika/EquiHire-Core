@@ -1,27 +1,23 @@
-# EquiHire Documentation Index
+# EquiHire-Core Documentation
 
-This directory contains the technical documentation for the EquiHire platform. It provides a comprehensive guide to the system's architecture, security protocols, and integration interfaces.
-
----
-
-## Technical Documentation
-
-1.  **[Introduction and Architecture Overview](./introduction.md)**
-    Detailed analysis of the recruitment bias problem and the "Agentic Bias Firewall" solution. Includes system-level orchestration diagrams and the project roadmap.
-
-2.  **[Getting Started and Local Development](./getting-started.md)**
-    A guide to configuring runtime environments, managed services (Supabase, Asgardeo, Gemini), and executing the platform locally.
-
-3.  **[Identity and Authentication Lifecycle](./identity-lifecycle.md)**
-    Technical breakdown of the authentication flows, including WSO2 Asgardeo integration, Magic Link invitations, and session security.
-
-4.  **[REST API Reference](./api-endpoints.md)**
-    Detailed specification of the Ballerina Gateway endpoints, including request/response schemas and AI pipeline triggers.
+This directory contains the technical documentation for the EquiHire-Core platform.
 
 ---
 
-## Project Structure Reference
+## Table of Contents
 
-- **[ballerina-gateway](../ballerina-gateway/README.md)**: The integration hub used for AI orchestration and data persistence.
-- **[react-frontend](../react-frontend/README.md)**: The administrative and candidate-facing user interfaces.
+| File | Title | Description |
+|---|---|---|
+| [getting-started.md](getting-started.md) | Getting Started | Step-by-step setup guide covering prerequisites, configuration keys, database initialisation, running the backend and frontend, Docker deployment, and test execution |
+| [api-endpoints.md](api-endpoints.md) | API Reference | Complete REST API documentation: all endpoints, request/response schemas, field types, validation rules, and a Postman collection |
+| [introduction.md](introduction.md) | Introduction | Problem statement, design philosophy, bias-firewall concept, and high-level system architecture |
+| [identity-lifecycle.md](identity-lifecycle.md) | Identity Lifecycle | Authentication flows, PII anonymisation pipeline, and recruiter identity-reveal mechanics |
+| [frontend-design.md](frontend-design.md) | Frontend Design | Component structure and design decisions for the React dashboard |
 
+---
+
+## Conventions
+
+- All configuration values are documented in `ballerina-gateway/Config.toml.example`.
+- The database schema is in `supabase_schema.sql` at the project root.
+- Docker deployment files are in `ballerina-gateway/`.
