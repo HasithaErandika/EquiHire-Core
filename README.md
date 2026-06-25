@@ -1,5 +1,11 @@
 # EquiHire-Core: AI-Native Blind Assessment Platform
 
+[![Build](https://github.com/HasithaErandika/EquiHire-Core/actions/workflows/ci.yml/badge.svg)](https://github.com/HasithaErandika/EquiHire-Core/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)](ballerina-gateway/Ballerina.toml)
+[![Issues](https://img.shields.io/github/issues/HasithaErandika/EquiHire-Core)](https://github.com/HasithaErandika/EquiHire-Core/issues)
+[![Backend](https://img.shields.io/badge/backend-Ballerina-orange)](ballerina-gateway)
+[![Frontend](https://img.shields.io/badge/frontend-TypeScript%20%2F%20React-3178C6)](react-frontend)
+
 **"Evaluating Code, Not Context."**
 
 EquiHire is a structured technical assessment platform built around a principle of objective evaluation. It acts as a bias firewall by anonymising candidate identity during assessment and scoring responses purely on technical merit through a multi-stage AI pipeline.
@@ -95,8 +101,9 @@ The test suite is split into groups:
 | Group | Description | Requires live credentials |
 |---|---|---|
 | `unit` | Pure offline logic tests (AI grading, HF gate, utils) | No |
-| `connection` | Live connectivity checks (Gemini, HF, Supabase, SMTP, R2) | Yes |
-| `integration` | End-to-end API tests (requires running server) | Yes |
+| `integration` | Live connectivity checks (Gemini, HF, Supabase, SMTP, R2) plus end-to-end API tests (requires running server) | Yes |
+
+There is no separate `connection` group — `connection_test.bal` is tagged `integration`. See [Getting Started](doc/getting-started.md#running-the-test-suite) for sub-group tags (`hf-gate`, `ai-grading`).
 
 ---
 

@@ -1,15 +1,23 @@
-# EquiHire Documentation
+# EquiHire-Core Documentation
 
-Welcome to the EquiHire Core documentation. This folder contains detailed information about the system architecture, API reference, and specific workflows.
+This directory contains the technical documentation for the EquiHire-Core platform.
+
+---
 
 ## Table of Contents
 
-1.  **[System Overview/Introduction](./introduction.md)**: Detailed problem, solution, **Architecture Diagram**, and roadmap.
-2.  **[Getting Started](./getting-started.md)**: Installation and setup guide.
-3.  **[Identity Lifecycle](./identity-lifecycle.md)**: Detailed flow of Authentication, Sign-up, and Magic Link Invitations using Asgardeo.
-4.  **[API Reference](./api-endpoints.md)**: List of available HTTP endpoints.
+| File | Title | Description |
+|---|---|---|
+| [getting-started.md](getting-started.md) | Getting Started | Step-by-step setup guide covering prerequisites, configuration keys, database initialisation, running the backend and frontend, Docker deployment, and test execution |
+| [api-endpoints.md](api-endpoints.md) | API Reference | Complete REST API documentation: all endpoints, request/response schemas, field types, validation rules, and a Postman collection |
+| [introduction.md](introduction.md) | Introduction | Problem statement, design philosophy, bias-firewall concept, and high-level system architecture |
+| [identity-lifecycle.md](identity-lifecycle.md) | Identity Lifecycle | Authentication flows, PII anonymisation pipeline, and recruiter identity-reveal mechanics |
+| [frontend-design.md](frontend-design.md) | Frontend Design | Component structure and design decisions for the React dashboard |
 
-## Project Structure
+---
 
--   `ballerina-gateway`: The core orchestrator.
--   `react-frontend`: The dashboard for Recruiters.
+## Conventions
+
+- All configuration values are documented in `ballerina-gateway/Config.toml.example`.
+- The database schema is in `supabase_schema.sql` at the project root.
+- Docker deployment files are in `ballerina-gateway/`.

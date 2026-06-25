@@ -24,7 +24,7 @@ EquiHire is an AI-Native Blind Assessment Platform designed to act as an objecti
 
 ## System Architecture
 
-The following **High-Level Container Diagram** (based on the C4 Model) illustrates the EquiHire system architecture, highlighting the specific roles of the Microservices, SaaS components, and the unified AI Engine.
+The following **High-Level Container Diagram** (based on the C4 Model) illustrates the EquiHire system architecture: one backend service, one frontend SPA, and the external SaaS components each integrates with.
 
 ```mermaid
 graph TB
@@ -45,13 +45,12 @@ graph TB
     end
 
     %% --- INTERNAL SYSTEM ---
+    webapp[Frontend SPA<br/>React + Vite + Tailwind<br/><i>Deployed on Vercel</i>]
+
     subgraph EquiHire Cloud Environment [WSO2 Choreo Environment]
-        
-        %% Frontend Container
-        webapp[Frontend SPA<br/>React + Vite + Tailwind]
-        
-        %% Backend Containers
-        subgraph Backend Microservice
+        %% Backend Container — ONE deployable service, not a set of microservices.
+        %% Internally layered: api.bal (controller) -> services/ -> repositories/ -> clients/
+        subgraph Backend Service [Ballerina Backend — Modular Monolith]
             gateway[Unified API & AI Integrator<br/>Ballerina Swan Lake]
         end
     end
@@ -64,7 +63,7 @@ graph TB
     auth -- "JWT Token" --> webapp
 
     %% 2. User Interactions
-    candidate -- "2. Takes Lockdown Exam<br/>(HTTPS/WSS)" --> webapp
+    candidate -- "2. Takes Lockdown Exam<br/>(HTTPS)" --> webapp
     recruiter -- "Views Dashboard / Grades<br/>(HTTPS)" --> webapp
     admin -- "Configures Bias Blocklist<br/>(HTTPS)" --> webapp
 
@@ -74,12 +73,16 @@ graph TB
     %% 4. Backend Processing
     gateway -- "Read/Write Job/Exam Data" --> db
 
-    %% 5. Secure Storage & Extraction
-    gateway -- "Generate Presigned URL" --> webapp
-    webapp -- "5a. Direct Secure Upload (CV PDF)" --> storage
-    gateway -- "5b. Read CV & PDFBox Text Extraction" --> storage
-    gateway -- "5c. Core CV Parse & PII Map" --> gemini
-    gemini -- "5d. Parsed Sections & Context JSON" --> gateway
+    %% 5. CV Upload & Extraction (file bytes flow through the gateway, not direct-to-storage)
+    webapp -- "5a. Upload CV (multipart/form-data)" --> gateway
+    gateway -- "5b. PDFBox Text Extraction (in-memory)" --> gateway
+    gateway -- "5c. Store Original PDF" --> storage
+    gateway -- "5d. CV Parse & PII Map" --> gemini
+    gemini -- "5e. Parsed Sections & Context JSON" --> gateway
+
+    %% 5f. Identity Reveal (this is the one leg that genuinely uses a presigned URL)
+    gateway -- "5f. Generate Presigned GET URL (on reveal)" --> storage
+    gateway -- "5g. Presigned URL" --> webapp
 
     %% 6. Grading AI Processing Flow
     gateway -- "6a. Pre-redact & Relevance Gate" --> huggingface
@@ -97,16 +100,27 @@ graph TB
     classDef component fill:#e2e3e5,stroke:#6c757d,stroke-width:1px,color:black;
 
     class candidate,recruiter,admin user;
-    class auth,storage,db,gemini saas;
-    class webapp,gateway,IntelligenceEngine container;
-    class controller,wrapper component;
+    class auth,storage,db,gemini,huggingface saas;
+    class webapp,gateway container;
 ```
 
 ### Architectural Highlights
 
-1.  **Hybrid Cloud Approach:** We adopted a Hybrid Cloud architecture deployed on **WSO2 Choreo**, separating core logic from managed SaaS providers (Supabase, external AI APIs) to ensure scalability and security.
-2.  **Unified Microservice Core:**
-    *   **Ballerina Backend:** Acts as a powerful integration hub, handling high-concurrency API traffic, Java interoperability (Apache PDFBox for PDF reading), routing, and identity management with WSO2 Asgardeo. It heavily utilizes Ballerina's native JSON data-binding for strict schema enforcement and retry logic across LLM boundaries.
+1.  **Hybrid Cloud Approach:** The Ballerina gateway is deployed on **WSO2 Choreo**, the React SPA is deployed separately on **Vercel**, and both integrate with managed SaaS providers (Supabase, external AI APIs) — separating core orchestration logic from undifferentiated infrastructure to ensure scalability and security.
+
+2.  **What kind of backend architecture is this, actually?** It is **one Ballerina service, deployed as a single unit** — not a microservices architecture. There is one process, one shared Supabase database, and no independently-deployable service boundaries between "jobs," "candidates," "invitations," etc. — those are all resources on the same `service /api` in `api.bal`. Internally it *is* organized as a clean **layered (n-tier) architecture**, split into Ballerina modules by responsibility:
+
+    | Layer | Module | Responsibility |
+    |---|---|---|
+    | Controller / API | `api.bal`, `health_api.bal` | HTTP routing, request/response shaping |
+    | Service | `modules/services/*` | Business logic — CV pipeline, grading pipeline, invitations, reveal |
+    | Repository | `modules/repositories/*` | Data access — wraps Supabase PostgREST calls |
+    | Client | `modules/clients/*` | Thin HTTP clients for Gemini, HuggingFace, R2, Supabase |
+    | Types / Constants / Config / Utils | supporting modules | Shared records, named constants, configurable values, helpers |
+
+    It is **not classic MVC** either — there's no "View" in the backend at all (the view is the separate React SPA, an entirely different deployable); the closest mapping is Controller → Service → Repository. And it is **not Clean Architecture** in the strict (Uncle Bob) sense, because there's no dependency inversion: the service layer imports concrete repository and client modules directly (`import equihire/gateway.repositories;`, `import equihire/gateway.clients;`) rather than depending on abstractions/ports that infrastructure implements. The honest label is: **a modular monolith with a layered internal structure** — which is also exactly the shape Ballerina is designed for (an "integration" service fanning out to several backends from one process), not a deliberate microservices decomposition.
+
 3.  **Composite AI Layer:** An integration of varied models including **HuggingFace** connector models (`bart-large-mnli`) for fast zero-shot candidate answer screening alongside **Google Gemini Flash** for deep structural extraction (CV parsing) and final adaptive scoring feedback.
-4.  **Zero-Trust "Vault" Data Flow:** CVs are uploaded directly to **Cloudflare R2** via Presigned URLs. Raw answers are saved in an isolated answer vault *before* any AI processing begins, guaranteeing no candidate data is lost to downstream generation failures.
+
+4.  **Zero-Trust "Vault" Data Flow:** Raw candidate answers are saved to an isolated answer vault *before* any AI processing begins, guaranteeing no candidate data is lost to a downstream Gemini/HuggingFace failure. CVs follow a different path worth being precise about: the original PDF is uploaded from the browser to the Ballerina gateway (`multipart/form-data`), which extracts text in-memory via PDFBox and then stores the original bytes in Cloudflare R2 itself — it is **not** a direct browser-to-R2 presigned upload. Presigned URLs *are* used for the **reveal** flow: when a recruiter unmasks a candidate's CV, the gateway generates a short-lived presigned GET URL so the recruiter's browser fetches the file straight from R2.
 

@@ -22,12 +22,14 @@ services:
     container_name: equihire-ballerina-gateway
     ports:
       - "9092:9092"
+      - "9093:9093"
     volumes:
       # Mount Config.toml so credentials are not baked into the image.
       - ./Config.toml:/app/Config.toml:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9092/health"]
+      # Health check runs on its own listener (port 9093), not the main API port.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/health"]
       interval: 30s
       timeout: 10s
       retries: 3
