@@ -4,6 +4,8 @@
 
 All endpoints accept and return `application/json` unless otherwise noted. CORS is open (`*`) for all origins.
 
+> The one exception is `/health` (see [§8](#8-health)), which is served by a separate listener on **port 9093** with no `/api` prefix.
+
 ---
 
 ## 1. Organizations
@@ -336,7 +338,7 @@ Begin a tracked exam session for a candidate.
 **Response `200`**
 
 ```json
-{ "sessionId": "<session-uuid>", "candidateId": "<candidate-uuid>" }
+{ "sessionId": "<session-uuid>", "status": "in_progress" }
 ```
 
 ---
@@ -352,6 +354,7 @@ Submit a completed assessment. Writes raw answers immediately, then runs the ful
 {
   "sessionId": "<session-uuid>",
   "jobId": "<job-uuid>",
+  "invitationId": "<invitation-uuid>",
   "submissionType": "manual",
   "answers": [
     {
@@ -370,6 +373,15 @@ Submit a completed assessment. Writes raw answers immediately, then runs the ful
 }
 ```
 
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `sessionId` | string | Yes | UUID returned by `start-session` |
+| `jobId` | string | Yes | UUID of the job |
+| `invitationId` | string | Yes | UUID of the invitation |
+| `submissionType` | string | No | `manual` (default), `timer_expired`, or `focus_loss_limit` |
+| `answers` | object[] | Yes | List of `{questionId, answerText, timeSpentSeconds}` |
+| `cheatEvents` | object[] | Yes | List of `{eventType, occurredAt, details}` (send `[]` if none) |
+
 **Response `200`**
 
 ```json
@@ -381,19 +393,27 @@ Submit a completed assessment. Writes raw answers immediately, then runs the ful
 ---
 
 ### GET /candidates/{candidateId}/reveal
-Unmask a candidate's identity (PII reveal). Restricted to authorised recruiters. Creates an audit log entry on every call.
+Reveal a candidate's original uploaded CV document. This does **not** return PII fields directly — it generates a short-lived presigned URL to the candidate's original CV PDF in Cloudflare R2 (the document containing their real name and contact details). Creates an audit log entry (`CV Accessed`) on every call.
+
+> Candidate name, email, and phone are already included in the `GET /candidates/{candidateId}/transcript` response (resolved from the PII map) — `reveal` is specifically for viewing the original CV file, not for fetching identity text fields.
 
 **Path Parameters:** `candidateId` — UUID of the candidate.
 
-**Response `200`**
+**Response `200` — CV found**
 
 ```json
 {
-  "candidateId": "<uuid>",
-  "fullName": "Jane Smith",
-  "email": "jane@example.com",
-  "phone": "+1-555-0100"
+  "url": "https://<r2-account>.r2.cloudflarestorage.com/<bucket>/cvs/<uuid>.pdf?...",
+  "status": "ready"
 }
+```
+
+`url` is a presigned GET URL valid for 1 hour.
+
+**Response `200` — CV missing or R2 error**
+
+```json
+{ "url": null, "status": "error" }
 ```
 
 ---
@@ -421,8 +441,8 @@ Retrieve the full assessment transcript including all answers, scores, CV metada
 ```json
 {
   "candidateId": "<uuid>",
-  "candidateName": "Candidate #A3F2",
-  "candidateEmail": "redacted",
+  "candidateName": "Jane Smith",
+  "candidateEmail": "jane@example.com",
   "jobTitle": "Senior Backend Engineer",
   "appliedDate": "2026-04-22",
   "overallScore": 78.5,
@@ -430,13 +450,29 @@ Retrieve the full assessment transcript including all answers, scores, CV metada
   "skillsScore": 74.0,
   "interviewScore": 77.0,
   "summaryFeedback": "Strong distributed systems knowledge...",
-  "transcript": [ { "questionText": "...", "answerText": "...", "score": 8 } ],
+  "transcript": [
+    {
+      "questionText": "Explain the CAP theorem.",
+      "questionType": "paragraph",
+      "sampleAnswer": "Consistency, Availability, Partition tolerance...",
+      "redactedAnswer": "[CANDIDATE] explained CAP as a tradeoff between...",
+      "score": 8,
+      "feedback": "Solid grasp of the core tradeoffs, missing a concrete example.",
+      "hfGatePassed": true,
+      "wasFlagged": false
+    }
+  ],
   "education": [...],
   "workExperience": [...],
+  "projects": [...],
   "technicalSkills": [...],
-  "phone": "redacted"
+  "achievements": [...],
+  "certificates": [...],
+  "phone": "+1-555-0100"
 }
 ```
+
+> Unlike the candidate dashboard list (which shows an anonymised placeholder like `Candidate #A3F2` until a hiring decision is made), the transcript endpoint always resolves and returns the candidate's real name, email, and phone via the stored PII map — it is intended for recruiters actively reviewing a single candidate's full evaluation. `redactedAnswer` is the candidate's answer with any self-disclosed PII (names, emails, etc.) redacted before it was sent to Gemini for grading.
 
 ---
 
@@ -606,10 +642,12 @@ Retrieve the full audit trail for an organization.
 ## 8. Health
 
 ### GET /health
-Liveness check endpoint.
+Liveness check endpoint. Served by a **separate listener on port 9093** (not part of the `/api` service on 9092, and not prefixed with `/api`).
+
+**Base URL:** `http://localhost:9093/health`
 
 **Response `200`**
 
 ```json
-{ "status": "UP" }
+{ "status": "ok", "version": "2.0.0", "platform": "EquiHire" }
 ```

@@ -45,7 +45,7 @@ cd EquiHire-Core
 4. Paste the full SQL content into the editor and click **Run**.
 5. Verify the tables were created under the **Table Editor**.
 
-> **Note:** The schema uses Row Level Security policies. Ensure the Supabase service role key is used in `Config.toml` (not the anon key) so the backend can bypass RLS.
+> **Note:** The schema uses Row Level Security policies. Both `supabaseAnonKey` and `supabaseServiceKey` must be set in `Config.toml` — write operations use the service role key to bypass RLS.
 
 ---
 
@@ -63,7 +63,8 @@ Open `Config.toml` and fill in each value. The following table describes every c
 | Key | Description |
 |---|---|
 | `supabaseUrl` | Your Supabase project URL (e.g., `https://xxxxx.supabase.co`) |
-| `supabaseKey` | Your Supabase **service role** API key (not the anon key) |
+| `supabaseAnonKey` | Your Supabase **anon** API key — used for read queries |
+| `supabaseServiceKey` | Your Supabase **service role** API key — used for writes/upserts so the backend can bypass Row Level Security |
 
 ### Google Gemini
 
@@ -92,17 +93,21 @@ Open `Config.toml` and fill in each value. The following table describes every c
 
 | Key | Description |
 |---|---|
-| `smtpHost` | SMTP server hostname |
+| `smtpHost` | SMTP server hostname (e.g. `smtp-relay.brevo.com`) |
 | `smtpPort` | SMTP port (typically `587` for TLS) |
 | `smtpUsername` | SMTP account username |
 | `smtpPassword` | SMTP account password |
-| `senderEmail` | The From address for outbound emails |
+| `smtpFromEmail` | The From address for outbound emails |
 
-### Asgardeo
+### WSO2 Asgardeo
 
 | Key | Description |
 |---|---|
-| `asgardeoJwksUrl` | JWKS endpoint URL from your Asgardeo application |
+| `asgardeoOrgUrl` | OAuth2 token endpoint for your Asgardeo tenant (e.g. `https://api.asgardeo.io/t/<org>/oauth2/token`) |
+| `asgardeoAudience` | Expected JWT audience claim (your Asgardeo application name) |
+| `asgardeoJwksUrl` | JWKS endpoint URL from your Asgardeo application (e.g. `https://api.asgardeo.io/t/<org>/oauth2/jwks`) |
+
+All three Asgardeo keys are required — the gateway fails to start if any are missing.
 
 ### Application
 
@@ -119,11 +124,11 @@ cd ballerina-gateway
 bal run
 ```
 
-The gateway starts on port **9092**. Verify it is running:
+The gateway starts on port **9092** for the main API. A separate, second listener on port **9093** serves the health check. Verify it is running:
 
 ```bash
-curl http://localhost:9092/health
-# Expected: {"status":"UP"}
+curl http://localhost:9093/health
+# Expected: {"status":"ok","version":"2.0.0","platform":"EquiHire"}
 ```
 
 ---
@@ -152,7 +157,7 @@ cd ballerina-gateway
 docker compose up --build
 ```
 
-The gateway is accessible at `http://localhost:9092`. The health check endpoint is probed automatically by the compose health check.
+The gateway is accessible at `http://localhost:9092`. The health endpoint runs on port 9093 inside the container; if you add a Docker healthcheck, point it at `http://localhost:9093/health`, not 9092.
 
 ---
 
@@ -166,23 +171,25 @@ bal test
 Tests are grouped for selective execution:
 
 ```bash
-# Run only offline unit tests (no credentials needed)
+# Run only offline unit tests (no credentials, no running server needed)
 bal test --groups unit
 
-# Run connectivity tests (requires a populated Config.toml)
-bal test --groups connection
-
-# Run integration tests (requires the gateway to be running on port 9092)
+# Run integration tests, including the live connectivity smoke tests
+# in connection_test.bal — requires a populated Config.toml and the
+# gateway running on port 9092
 bal test --groups integration
 ```
+
+There is no separate `connection` group — `connection_test.bal` (live smoke tests for Gemini, HuggingFace, Supabase, R2, SMTP) is tagged `integration`, same as `api_test.bal` and `security_test.bal`. `bal test --groups connection` runs zero tests.
 
 ### Test Groups
 
 | Group | Description | Requires Running Server | Requires Credentials |
 |---|---|---|---|
-| `unit` | Pure logic tests for AI grading pipeline and HF gate | No | No |
-| `connection` | Smoke tests for Gemini, HuggingFace, Supabase, R2, and SMTP | No | Yes |
-| `integration` | End-to-end API tests against live endpoints | Yes | Yes |
+| `unit` | Pure offline logic tests — `services_test.bal`, `utils_test.bal`, plus the finer-grained `hf-gate` and `ai-grading` sub-groups | No | No |
+| `integration` | Live connectivity checks (`connection_test.bal`) and end-to-end API tests (`api_test.bal`, `security_test.bal`) against the running gateway | Yes | Yes |
+
+You can further scope a run with the sub-group tags, e.g. `bal test --groups hf-gate` or `bal test --groups ai-grading`.
 
 ---
 
@@ -194,5 +201,5 @@ bal test --groups integration
 | Ballerina compile warnings about `isolated` methods | Non-isolated resource functions | These are hints, not errors; the service functions correctly |
 | `Gemini HTTP 400` in logs | Malformed or empty prompt sent to the API | Check that CV text was extracted correctly and is non-empty |
 | HuggingFace 503 in logs | HF inference endpoint temporarily unavailable | Expected; the gateway falls back and forwards the answer to Gemini |
-| `insertRawAnswer failed` in logs | Supabase connection issue or schema mismatch | Verify `supabaseUrl` and `supabaseKey` in `Config.toml`; ensure schema was applied |
+| `insertRawAnswer failed` in logs | Supabase connection issue or schema mismatch | Verify `supabaseUrl`, `supabaseAnonKey`, and `supabaseServiceKey` in `Config.toml`; ensure schema was applied |
 | SMTP `connection refused` | Incorrect SMTP host, port, or credentials | Test credentials separately using a standalone SMTP client |
